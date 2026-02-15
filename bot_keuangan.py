@@ -1,0 +1,197 @@
+import sqlite3
+from datetime import datetime
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+)
+
+TOKEN = "[REDACTED-TOKEN-BOT-KEUANGAN]"
+
+# ================= DATABASE =================
+conn = sqlite3.connect("keuangan.db")
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS transaksi (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tanggal TEXT,
+    jenis TEXT,
+    jumlah INTEGER,
+    keterangan TEXT
+)
+""")
+conn.commit()
+
+# ================= MENU =================
+def menu_utama():
+    keyboard = [
+        [
+            InlineKeyboardButton("➕ Pemasukan", callback_data="pemasukan"),
+            InlineKeyboardButton("➖ Pengeluaran", callback_data="pengeluaran"),
+        ],
+        [
+            InlineKeyboardButton("📊 Laporan", callback_data="laporan"),
+            InlineKeyboardButton("🗑 Reset Saldo", callback_data="reset"),
+        ],
+        [
+            InlineKeyboardButton("ℹ️ FAQ", callback_data="faq"),
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+# ================= START =================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "💰 MENU KEUANGAN",
+        reply_markup=menu_utama()
+    )
+
+# ================= CALLBACK =================
+async def tombol_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+
+    if data == "pemasukan":
+        await query.edit_message_text(
+            "Ketik:\n/pemasukan 50000 gaji",
+            reply_markup=menu_utama()
+        )
+
+    elif data == "pengeluaran":
+        await query.edit_message_text(
+            "Ketik:\n/pengeluaran 20000 makan",
+            reply_markup=menu_utama()
+        )
+
+    elif data == "laporan":
+        await kirim_laporan(query)
+
+    elif data == "faq":
+        await query.edit_message_text(
+            "ℹ️ Gunakan tombol untuk mencatat keuangan.\nGunakan /laporan untuk lihat laporan.",
+            reply_markup=menu_utama()
+        )
+
+    # ===== RESET KONFIRMASI =====
+    elif data == "reset":
+        keyboard = [
+            [
+                InlineKeyboardButton("✅ Ya, Reset", callback_data="confirm_reset"),
+                InlineKeyboardButton("❌ Batal", callback_data="batal"),
+            ]
+        ]
+        await query.edit_message_text(
+            "⚠️ Yakin ingin reset semua saldo?\nSemua data akan dihapus!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    elif data == "confirm_reset":
+        cursor.execute("DELETE FROM transaksi")
+        conn.commit()
+
+        await query.edit_message_text(
+            "🗑 Saldo berhasil direset!\nSemua transaksi dihapus.",
+            reply_markup=menu_utama()
+        )
+
+    elif data == "batal":
+        await query.edit_message_text(
+            "❌ Reset dibatalkan.",
+            reply_markup=menu_utama()
+        )
+
+# ================= PEMASUKAN =================
+async def pemasukan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        await update.message.reply_text("Contoh: /pemasukan 50000 gaji")
+        return
+
+    jumlah = int(context.args[0])
+    keterangan = " ".join(context.args[1:])
+    tanggal = datetime.now().strftime("%Y-%m-%d")
+
+    cursor.execute(
+        "INSERT INTO transaksi (tanggal, jenis, jumlah, keterangan) VALUES (?, ?, ?, ?)",
+        (tanggal, "pemasukan", jumlah, keterangan),
+    )
+    conn.commit()
+
+    await update.message.reply_text("✅ Pemasukan berhasil dicatat!")
+
+# ================= PENGELUARAN =================
+async def pengeluaran(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        await update.message.reply_text("Contoh: /pengeluaran 20000 makan")
+        return
+
+    jumlah = int(context.args[0])
+    keterangan = " ".join(context.args[1:])
+    tanggal = datetime.now().strftime("%Y-%m-%d")
+
+    cursor.execute(
+        "INSERT INTO transaksi (tanggal, jenis, jumlah, keterangan) VALUES (?, ?, ?, ?)",
+        (tanggal, "pengeluaran", jumlah, keterangan),
+    )
+    conn.commit()
+
+    await update.message.reply_text("✅ Pengeluaran berhasil dicatat!")
+
+# ================= LAPORAN =================
+async def laporan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await kirim_laporan(update.message)
+
+async def kirim_laporan(target):
+    bulan_ini = datetime.now().strftime("%Y-%m")
+
+    cursor.execute(
+        "SELECT jenis, jumlah, keterangan FROM transaksi WHERE tanggal LIKE ?",
+        (bulan_ini + "%",)
+    )
+
+    data = cursor.fetchall()
+
+    total_pemasukan = 0
+    total_pengeluaran = 0
+
+    text = "📊 Laporan Bulan " + bulan_ini + "\n\n"
+
+    text += "💵 Pemasukan:\n"
+    for row in data:
+        if row[0] == "pemasukan":
+            text += "+ Rp" + str(row[1]) + " - " + row[2] + "\n"
+            total_pemasukan += row[1]
+
+    text += "\n💸 Pengeluaran:\n"
+    for row in data:
+        if row[0] == "pengeluaran":
+            text += "- Rp" + str(row[1]) + " - " + row[2] + "\n"
+            total_pengeluaran += row[1]
+
+    saldo = total_pemasukan - total_pengeluaran
+
+    text += "\n----------------------\n"
+    text += "Total Pemasukan: Rp" + str(total_pemasukan) + "\n"
+    text += "Total Pengeluaran: Rp" + str(total_pengeluaran) + "\n"
+    text += "Saldo: Rp" + str(saldo)
+
+    if hasattr(target, "edit_message_text"):
+        await target.edit_message_text(text, reply_markup=menu_utama())
+    else:
+        await target.reply_text(text, reply_markup=menu_utama())
+
+# ================= RUN =================
+app = ApplicationBuilder().token(TOKEN).build()
+
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("pemasukan", pemasukan))
+app.add_handler(CommandHandler("pengeluaran", pengeluaran))
+app.add_handler(CommandHandler("laporan", laporan))
+app.add_handler(CallbackQueryHandler(tombol_handler))
+
+print("Bot berjalan...")
+app.run_polling(drop_pending_updates=True, timeout=30)
