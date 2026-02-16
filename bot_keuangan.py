@@ -48,7 +48,39 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "💰 MENU KEUANGAN",
         reply_markup=menu_utama()
     )
+def start(update, context):
+    teks = (
+        "👋 *Halo, selamat datang di Bot Keuangan Bulanan!*\n\n"
+        "Bot ini membantu kamu mencatat dan mengelola keuangan secara otomatis.\n\n"
+        "📌 Fitur:\n"
+        "• 💰 Catat pemasukan\n"
+        "• 💸 Catat pengeluaran\n"
+        "• 📊 Laporan bulanan\n"
+        "• 🔄 Reset saldo\n\n"
+        "Gunakan menu untuk mulai mencatat.\n\n"
+        "_Kelola uang dengan bijak!_ 💪"
+    )
 
+    keyboard = [
+        [
+            InlineKeyboardButton("📸 Instagram", url="https://instagram.com/xxayiigdrgn"),
+            InlineKeyboardButton("❌ X", url="https://x.com/xxayii")
+        ],
+        [
+            InlineKeyboardButton("💬 Contact Me", url="https://t.me/xxayii")
+        ],
+        [
+            InlineKeyboardButton("☕ Saweria", url="https://saweria.co/xxayii")
+        ]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text(
+        teks,
+        parse_mode="Markdown",
+        reply_markup=reply_markup
+    )
 # ================= CALLBACK =================
 async def tombol_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
