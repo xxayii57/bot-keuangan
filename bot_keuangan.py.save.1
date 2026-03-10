@@ -35,7 +35,38 @@ def menu_utama():
         [
             InlineKeyboardButton("📊 Laporan", callback_data="laporan"),
             InlineKeyboardButton("🗑 Reset Saldo", callback_data="reset"),
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    teks = (
+        "👋 *Halo, selamat datang di Bot Keuangan Bulanan!*\n\n"
+        "Bot ini membantu kamu mencatat dan mengelola keuangan dengan mudah.\n\n"
+        "📌 Fitur:\n"
+        "• 💰 Catat pemasukan\n"
+        "• 💸 Catat pengeluaran\n"
+        "• 📊 Laporan bulanan\n"
+        "• 🔄 Reset saldo\n\n"
+        "Gunakan menu di bawah untuk mulai.\n"
+    )
+
+    keyboard = [
+        [
+            InlineKeyboardButton("📸 Instagram", url="https://instagram.com/USERNAME_KAMU"),
+            InlineKeyboardButton("❌ X", url="https://x.com/USERNAME_KAMU")
         ],
+        [
+            InlineKeyboardButton("💬 Contact Me", url="https://t.me/USERNAME_KAMU")
+        ],
+        [
+            InlineKeyboardButton("☕ Saweria", url="https://saweria.co/USERNAME_KAMU")
+        ]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        teks,
+        parse_mode="Markdown",
+        reply_markup=reply_markup
+    )        ],
         [
             InlineKeyboardButton("ℹ️ FAQ", callback_data="faq"),
         ],
@@ -84,38 +115,7 @@ def start(update, context):
 # ================= CALLBACK =================
 async def tombol_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    teks = (
-        "👋 *Halo, selamat datang di Bot Keuangan Bulanan!*\n\n"
-        "Bot ini membantu kamu mencatat dan mengelola keuangan dengan mudah.\n\n"
-        "📌 Fitur:\n"
-        "• 💰 Catat pemasukan\n"
-        "• 💸 Catat pengeluaran\n"
-        "• 📊 Laporan bulanan\n"
-        "• 🔄 Reset saldo\n\n"
-        "Gunakan menu di bawah untuk mulai.\n"
-    )
-
-    keyboard = [
-        [
-            InlineKeyboardButton("📸 Instagram", url="https://instagram.com/USERNAME_KAMU"),
-            InlineKeyboardButton("❌ X", url="https://x.com/USERNAME_KAMU")
-        ],
-        [
-            InlineKeyboardButton("💬 Contact Me", url="https://t.me/USERNAME_KAMU")
-        ],
-        [
-            InlineKeyboardButton("☕ Saweria", url="https://saweria.co/USERNAME_KAMU")
-        ]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.message.reply_text(
-        teks,
-        parse_mode="Markdown",
-        reply_markup=reply_markup
-    )    await query.answer()
+    await query.answer()
 
     data = query.data
 

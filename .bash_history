@@ -78,3 +78,40 @@ pyhton password_checker.py
 python password_checker.sh py
 nano password_checker.sh
 python bot_keuangan.py
+ls
+cd bot-keuangan
+cd bot_keuangan.py
+cd bot-keuangan
+cd bot_keuangan
+ls
+nano requirements.txt
+git add .
+git commit -m "fix telegram version"
+git push
+pip show python-telegram-bot
+nano requirements.txt
+cat requirements.txt
+git add requirements.txt
+git commit -m "force downgrade to v13"
+git push
+nano runtime.txt
+git add .
+git commit -m "set python 3.11"
+git push
+nano bot_keuangan.py
+git add .
+git commit -m "fix async start"
+git push
+git commit --allow-empty -m "restart"
+git push
+nano bot_keuangan.py
+git status
+git add .
+git commit -m "update start description"
+git push
+git log --oneline -3
+git status
+git add
+git log --oneline -3
+git commit --allow-empty -m "force deploy update start"
+git push
