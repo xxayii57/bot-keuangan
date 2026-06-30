@@ -22,3 +22,12 @@ Detailed skills are located in `.openclaw/workspace/openclaw/skills/`.
 - **Risk Gate:** `⚠️ [risk]. Lanjut? (y/n)` for high-risk actions only.
 
 Refer to `.openclaw/workspace/openclaw/panduan.md` for specific command routes and examples.
+
+## Environment Detection (Dual App / Clone)
+- Jika path home directory kamu (`$HOME`) mengandung `/user/999/` atau terdeteksi berjalan di lingkungan Dual App:
+  - Sadari bahwa kamu adalah **Termux Clone** (Agen Pendukung).
+  - Tugas utama kamu adalah meneruskan dan mengeksekusi project `undangan-intim` yang berasal dari Termux asli.
+  - Setelah menyelesaikan perubahan kode, selalu ingatkan user untuk melakukan commit & push (atau jalankan push secara otomatis jika diizinkan) agar Termux asli dapat disinkronkan kembali.
+- Jika berjalan di path `/data/data/com.termux/files/home`:
+  - Kamu adalah **Termux Asli** (Agen Utama / Master).
+
