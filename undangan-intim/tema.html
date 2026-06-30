@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta name=color-scheme content=light>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Katalog Tema – Undangan Intim</title>
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+  <meta name="description" content="Pilih tema undangan digital sesuai gaya yang kamu suka. Ada elegant, islami, luxury, floral, dan minimal.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+    color-scheme: light;
+      --cream:#faf6f0;
+      --ink:#2f1f14;
+      --muted:#6c5748;
+      --gold:#c4975a;
+      --line:rgba(64,41,24,.12);
+      --shadow:0 18px 42px rgba(70,48,31,.11);
+      --radius:28px;
+      --max:1180px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:'DM Sans',sans-serif;
+      background:var(--cream);
+      color:var(--ink);
+    }
+    a{text-decoration:none;color:inherit}
+    .wrap{width:min(calc(100% - 32px),var(--max));margin:auto}
+    .top{padding:28px 0 18px}
+    .crumb{color:var(--muted);font-size:.92rem}
+    .crumb a{color:var(--gold)}
+    h1,h2,h3{font-family:'Cormorant Garamond',serif;margin:0;line-height:1.02}
+    h1{font-size:clamp(2.8rem,6vw,4.8rem);margin-top:12px}
+    .sub{max-width:62ch;color:var(--muted);line-height:1.8;margin-top:14px}
+    .tools{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-top:28px}
+    .search,.filters{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.7);
+      border-radius:22px;
+      padding:14px 16px;
+      box-shadow:var(--shadow);
+    }
+    input,select{width:100%;border:none;background:transparent;font:inherit;color:var(--ink);outline:none}
+    .chips{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 4px}
+    .chip{
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.7);
+      border:1px solid var(--line);
+      cursor:pointer;
+      color:var(--muted);
+      font-size:.88rem;
+      transition: all 0.2s;
+    }
+    .chip.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+    
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:24px;
+      padding:18px 0 40px;
+    }
+    .card{
+      background:rgba(255,255,255,.72);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      transition:transform .3s ease, box-shadow .3s ease;
+      display:flex;
+      flex-direction:column;
+    }
+    .card:hover{
+      transform:translateY(-5px);
+      box-shadow:0 24px 48px rgba(70,48,31,.18);
+    }
+    
+    /* Phone mockup styling */
+    .mockup-container {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 0px;
+      perspective: 800px;
+    }
+    .phone-mockup {
+      position: absolute;
+      width: 95px;
+      height: 165px;
+      border-radius: 14px;
+      background: #111;
+      border: 3.5px solid #1c1c1e;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      bottom: -15px;
+    }
+    .phone-left {
+      left: calc(50% - 82px);
+      transform: rotateY(18deg) rotateX(10deg) rotateZ(-12deg) scale(0.88);
+      z-index: 5;
+      opacity: 0.88;
+    }
+    .phone-right {
+      right: calc(50% - 82px);
+      transform: rotateY(-18deg) rotateX(10deg) rotateZ(12deg) scale(0.88);
+      z-index: 5;
+      opacity: 0.88;
+    }
+    .phone-center {
+      left: 50%;
+      transform: translateX(-50%) rotateX(5deg) scale(1.02);
+      z-index: 10;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.45);
+      bottom: -8px;
+    }
+    
+    /* Hover phone transitions */
+    .card:hover .phone-left {
+      transform: rotateY(24deg) rotateX(10deg) rotateZ(-15deg) translate3d(-12px, -8px, 10px) scale(0.92);
+      opacity: 1;
+    }
+    .card:hover .phone-right {
+      transform: rotateY(-24deg) rotateX(10deg) rotateZ(15deg) translate3d(12px, -8px, 10px) scale(0.92);
+      opacity: 1;
+    }
+    .card:hover .phone-center {
+      transform: translateX(-50%) rotateX(0deg) translate3d(0, -12px, 20px) scale(1.08);
+      box-shadow: 0 18px 36px rgba(0,0,0,0.55);
+      bottom: -4px;
+    }
+    
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+    
+    /* Notch styling for center screen */
+    .phone-center::before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 6px;
+      background: #000;
+      border-radius: 3px;
+      z-index: 20;
+    }
+    
+    .body{padding:20px 22px 24px; display:flex; flex-direction:column; flex-grow:1}
+    .body p{margin:8px 0 0;color:var(--muted);line-height:1.6;font-size:0.88rem}
+    .meta,.actions{display:flex;flex-wrap:wrap;gap:8px}
+    .meta{margin-top:12px}
+    .meta span{
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.75);
+      border:1px solid rgba(64,41,24,.08);
+      font-size:.78rem;
+      color:var(--muted);
+    }
+    .actions{margin-top:auto; padding-top:16px}
+    .btn,.ghost{
+      display:inline-flex;
+      justify-content:center;
+      align-items:center;
+      padding:11px 16px;
+      border-radius:999px;
+      font-size:.84rem;
+      font-weight:700;
+      flex:1;
+      transition: all 0.2s ease;
+      cursor:pointer;
+      border: 1px solid transparent;
+    }
+    .btn{background:#231811;color:#fff;border-color:#231811}
+    .btn:hover{background:#3d2c20;border-color:#3d2c20}
+    .ghost{background:rgba(196,151,90,.12);color:#7f5c3d}
+    .ghost:hover{background:rgba(196,151,90,.22)}
+    
+    .empty{padding:28px;border:1px dashed rgba(64,41,24,.18);border-radius:24px;color:var(--muted);text-align:center;display:none}
+    
+    /* Spotify record spinning keyframe */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr 1fr; gap:16px}
+    }
+    @media (max-width:760px){
+      .tools{grid-template-columns:1fr}
+    }
+    @media (max-width:600px){
+      .grid{
+        grid-template-columns:1fr 1fr; 
+        gap:12px;
+        padding:12px 0 30px;
+      }
+      .card{
+        border-radius:20px;
+      }
+      .mockup-container {
+        height: 145px;
+      }
+      .phone-mockup {
+        width: 68px;
+        height: 120px;
+        border-radius: 9px;
+        border-width: 2px;
+        bottom: -10px;
+      }
+      .phone-left {
+        left: calc(50% - 58px);
+      }
+      .phone-right {
+        right: calc(50% - 58px);
+      }
+      .phone-center {
+        bottom: -5px;
+      }
+      .card:hover .phone-left {
+        transform: rotateY(24deg) rotateX(10deg) rotateZ(-15deg) translate3d(-8px, -5px, 5px) scale(0.92);
+      }
+      .card:hover .phone-right {
+        transform: rotateY(-24deg) rotateX(10deg) rotateZ(15deg) translate3d(8px, -5px, 5px) scale(0.92);
+      }
+      .card:hover .phone-center {
+        transform: translateX(-50%) rotateX(0deg) translate3d(0, -8px, 10px) scale(1.08);
+        bottom: -2px;
+      }
+      .phone-center::before {
+        top: 2px;
+        width: 20px;
+        height: 4px;
+        border-radius: 2px;
+      }
+      .body {
+        padding: 12px 14px 16px !important;
+      }
+      .body p, .meta {
+        display: none !important;
+      }
+      .actions {
+        padding-top: 10px !important;
+        gap: 6px !important;
+      }
+      .btn, .ghost {
+        padding: 8px 4px !important;
+        font-size: 0.76rem !important;
+        border-radius: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap top">
+    <div class="crumb"><a href="/">Home</a> / Katalog Tema</div>
+    <h1>Pilih yang cocok buat kalian</h1>
+    <p class="sub">Tiap tema punya karakter sendiri. Semua bisa disesuaikan nama, foto, dan warna sesuai request.</p>
+    <div class="tools">
+      <div class="search"><input id="searchInput" type="search" placeholder="Cari nama tema atau gaya..."></div>
+      <div class="filters">
+        <select id="sortSelect">
+          <option value="default">Urutkan: default</option>
+          <option value="price-asc">Harga termurah</option>
+          <option value="price-desc">Harga tertinggi</option>
+          <option value="name">Nama A-Z</option>
+        </select>
+      </div>
+    </div>
+    <div id="chips" class="chips"></div>
+    <div id="empty" class="empty">Belum ada tema yang cocok dengan filter ini.</div>
+    <div id="themeGrid" class="grid"></div>
+  </div>
+  <script src="/themes.js?v=1.1.4"></script>
+  <script>
+    const themes = [...window.THEME_DATA]; console.log("Themes loaded:", themes.length);
+    const grid = document.getElementById("themeGrid");
+    const empty = document.getElementById("empty");
+    const searchInput = document.getElementById("searchInput");
+    const sortSelect = document.getElementById("sortSelect");
+    const chipsEl = document.getElementById("chips");
+    const categories = ["Semua"].concat([...new Set(themes.map(t => t.category))]);
+    let activeCategory = "Semua";
+
+    chipsEl.innerHTML = categories.map(cat => `<button class="chip ${cat === activeCategory ? 'active' : ''}" data-cat="${cat}">${cat}</button>`).join("");
+    chipsEl.addEventListener("click", function (event) {
+      const btn = event.target.closest(".chip");
+      if (!btn) return;
+      activeCategory = btn.dataset.cat;
+      document.querySelectorAll(".chip").forEach(node => node.classList.toggle("active", node.dataset.cat === activeCategory));
+      render();
+    });
+
+    searchInput.addEventListener("input", render);
+    sortSelect.addEventListener("change", render);
+
+    function getMockupHtml(theme) {
+      const gallery = theme.gallery || [];
+      const demoGallery = window.WEDDING_DEMO_DATA.gallery || [];
+      
+      const getImg = (idx) => {
+        let item = gallery[idx] || demoGallery[idx] || '/assets/images/pputama.jpg';
+        if (typeof item === 'object' && item.src) return item.src;
+        return item;
+      };
+      
+      const img1 = getImg(0);
+      const img2 = getImg(1);
+      const img3 = getImg(2);
+
+      let centerOverlayHtml = '';
+      
+      if (theme.slug === 'v5') {
+        centerOverlayHtml = `
+          <div style="position: absolute; inset: 0; background: rgba(18,18,18,0.82); display: flex; flex-direction: column; justify-content: space-between; padding: 6px; color: #fff; font-family: sans-serif;">
+            <div style="display: flex; align-items: center; gap: 3px;">
+              <div style="width: 8px; height: 8px; background: #1DB954; border-radius: 50%;"></div>
+              <span style="font-size: 0.38rem; letter-spacing: 0.3px; opacity: 0.8; font-weight: bold;">Spotify Player</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 2px;">
+              <div style="width: 32px; height: 32px; background-image: url('${img2}'); background-size: cover; background-position: center; border-radius: 50%; animation: spin 8s linear infinite; border: 1.5px solid #333; box-shadow: 0 3px 6px rgba(0,0,0,0.5);"></div>
+              <div style="font-size: 0.45rem; font-weight: bold; width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; text-align: center; margin-top: 2px;">${theme.coverTitle || 'Alya & Fajar'}</div>
+              <div style="font-size: 0.35rem; color: #1DB954; font-weight: 500;">Special Playlist</div>
+            </div>
+            <div style="width: 100%;">
+              <div style="width: 100%; height: 1.5px; background: #555; border-radius: 1px; margin-bottom: 2px; position: relative;">
+                <div style="width: 38%; height: 100%; background: #1DB954; border-radius: 1px;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.3rem; color: #aaa; transform: scale(0.9);">
+                <span>0:45</span>
+                <span>3:20</span>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (theme.slug === 'v7') {
+        centerOverlayHtml = `
+          <div style="position: absolute; inset: 0; background: rgba(250,243,234,0.12); display: flex; flex-direction: column; justify-content: flex-end; padding: 4px;">
+            <div style="background: #FAF3EA; border: 1.5px solid #151419; padding: 2px 4px; transform: rotate(-3deg); box-shadow: 1.5px 1.5px 0 #151419; margin-bottom: 3px; text-align: center;">
+              <div style="font-size: 0.38rem; font-weight: 900; letter-spacing: 0.5px; color: #E63946; text-transform: uppercase; font-family: Impact, sans-serif;">WEDDING!</div>
+              <div style="font-size: 0.52rem; font-weight: 900; color: #151419; font-family: Impact, sans-serif; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${theme.coverTitle ? theme.coverTitle.replace('&', 'X') : 'ALYA X FAJAR'}</div>
+            </div>
+            <div style="background: #FAF3EA; border: 1px solid #151419; padding: 1px 3px; font-size: 0.32rem; font-weight: bold; color: #151419; text-align: center; width: max-content; margin: 0 auto; transform: scale(0.9);">
+              ${theme.coverDate || '15 DES 2026'}
+            </div>
+          </div>
+        `;
+      } else if (theme.slug === 'v4') {
+        centerOverlayHtml = `
+          <div style="position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 5px; color: #bfa37a; font-family: monospace; text-shadow: 1px 1px 0 #000;">
+            <div style="border: 1px solid #bfa37a; padding: 1px; font-size: 0.32rem; text-align: center; background: rgba(0,0,0,0.75); border-radius: 2px; transform: scale(0.95);">
+              HP: 999/999 | MP: 777/777
+            </div>
+            <div style="border: 1.5px solid #bfa37a; background: rgba(27,42,30,0.92); padding: 3px; text-align: center; border-radius: 3px; transform: translateY(4px) scale(0.95);">
+              <div style="font-size: 0.4rem; font-weight: bold; color: #bfa37a; letter-spacing: 0.5px;">[ QUEST START ]</div>
+              <div style="font-size: 0.45rem; color: #fff; margin: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${theme.coverTitle || 'Alya & Fajar'}</div>
+              <div style="font-size: 0.32rem; opacity: 0.8;">${theme.coverDate || '20.12.2026'}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        centerOverlayHtml = `
+          <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.75) 100%); display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 6px; color: #fff; text-align: center;">
+            <div style="font-size: 0.38rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; margin-bottom: 1px; transform: scale(0.9);">The Wedding of</div>
+            <div style="font-family: 'Cormorant Garamond', serif; font-size: 0.78rem; font-weight: 600; line-height: 1.1; margin-bottom: 2px; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">
+              ${theme.coverTitle || 'Alya & Fajar'}
+            </div>
+            <div style="font-size: 0.38rem; opacity: 0.7; font-family: 'DM Sans', sans-serif; transform: scale(0.9);">
+              ${theme.coverDate || '15 Des 2026'}
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="mockup-container" style="background:${theme.previewGradient}">
+          <div class="phone-mockup phone-left">
+            <div class="phone-screen" style="background-image:url('${img1}')"></div>
+          </div>
+          <div class="phone-mockup phone-center">
+            <div class="phone-screen" style="background-image:url('${img2}')">
+              ${centerOverlayHtml}
+            </div>
+          </div>
+          <div class="phone-mockup phone-right">
+            <div class="phone-screen" style="background-image:url('${img3}')"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      let items = themes.filter(function(theme) {
+        const q = searchInput.value.trim().toLowerCase();
+        const matchesCategory = activeCategory === "Semua" || theme.category === activeCategory;
+        const hay = [theme.name, theme.category, theme.style].concat(theme.tags).join(" ").toLowerCase();
+        const matchesSearch = !q || hay.includes(q);
+        return matchesCategory && matchesSearch;
+      });
+
+      if (sortSelect.value === "price-asc") items.sort((a,b) => a.priceStart - b.priceStart);
+      if (sortSelect.value === "price-desc") items.sort((a,b) => b.priceStart - a.priceStart);
+      if (sortSelect.value === "name") items.sort((a,b) => a.name.localeCompare(b.name));
+
+      empty.style.display = items.length ? "none" : "block";
+      grid.innerHTML = items.map(function(theme) {
+        return `
+          <article class="card">
+            ${getMockupHtml(theme)}
+            <div class="body">
+              <div style="font-size:0.7rem; color:var(--gold); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">${theme.category}</div>
+              <h3 style="font-size:1.15rem; color:var(--ink); font-family:'Cormorant Garamond', serif; font-weight:700; margin:0 0 6px 0; line-height:1.2;">${theme.name}</h3>
+              
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; margin-top:2px;">
+                <span style="font-size:0.82rem; font-weight:700; color:var(--ink);">
+                  Mulai <span style="text-decoration: line-through; opacity: 0.5; font-weight: normal; font-size: 0.76rem; margin-right: 4px;">Rp 59.000</span> Rp ${theme.priceStart.toLocaleString('id-ID')}
+                </span>
+                <span style="font-size:0.65rem; background:rgba(196,151,90,.15); color:var(--gold); padding:2px 6px; border-radius:4px; font-weight:700;">Premium</span>
+              </div>
+              
+              <p class="card-desc">${theme.style}</p>
+              <div class="meta">${theme.tags.map(tag => `<span>${tag}</span>`).join("")}</div>
+              
+              <div class="actions">
+                <a class="ghost" href="/themes/${theme.slug}/index.html?id=demo-${theme.slug}">Lihat Demo</a>
+                <a class="btn" href="/pesan.html?theme=${theme.slug}">Pesan Tema</a>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    render();
+  </script>
+<script src="/assets/chat-widget.js?v=1.0.3" defer></script>
+</body>
+</html>

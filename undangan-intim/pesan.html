@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta name=color-scheme content=light>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pesan Tema – Undangan Intim</title>
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+    color-scheme: light;--cream:#faf6f0;--ink:#2f1f14;--muted:#6c5748;--gold:#c4975a;--line:rgba(64,41,24,.12);--shadow:0 18px 42px rgba(70,48,31,.11);--radius:28px;--max:1080px}
+    *{box-sizing:border-box} body{margin:0;background:var(--cream);font-family:'DM Sans',sans-serif;color:var(--ink)}
+    a{text-decoration:none;color:inherit}.wrap{width:min(calc(100% - 32px),var(--max));margin:auto;padding:28px 0 40px}
+    .crumb{color:var(--muted);font-size:.92rem}.crumb a{color:var(--gold)}
+    h1,h2,h3{font-family:'Cormorant Garamond',serif;margin:0;line-height:1.02}
+    h1{font-size:clamp(2.8rem,6vw,4.6rem);margin-top:14px}
+    .sub{max-width:60ch;color:var(--muted);line-height:1.8;margin-top:14px}
+    .layout{display:grid;grid-template-columns:.86fr 1.14fr;gap:22px;margin-top:28px}
+    .card,.formbox{background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card-top{min-height:280px;padding:26px;display:flex;align-items:flex-end;color:#fff}
+    .card-body,.formbox{padding:24px}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.meta span{padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.75);border:1px solid rgba(64,41,24,.08);font-size:.8rem;color:var(--muted)}
+    .card-body p{margin:10px 0 0;color:var(--muted);line-height:1.75}
+    .price{margin-top:18px;font-size:1rem;color:var(--gold)}
+    form{display:grid;gap:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    label{display:grid;gap:8px;font-size:.92rem;color:var(--muted)}
+    input,select,textarea{width:100%;padding:14px 15px;border:1px solid rgba(64,41,24,.14);border-radius:18px;font:inherit;background:#fffdf9;color:var(--ink);outline:none}
+    textarea{min-height:110px;resize:vertical}
+    .hint{font-size:.85rem;color:var(--muted);line-height:1.7}
+    .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+    .btn,.ghost{display:inline-flex;justify-content:center;align-items:center;padding:14px 18px;border-radius:999px;font-weight:700}
+    .btn{background:var(--gold);color:#fff}
+    .ghost{background:rgba(255,255,255,.7);border:1px solid var(--line)}
+    .success{display:none;margin-top:14px;padding:14px 16px;border-radius:18px;background:rgba(196,151,90,.12);color:#7c5a3d}
+    @media (max-width:820px){.layout,.row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="crumb"><a href="/">Home</a> / <a href="/tema.html">Tema</a> / Pesan</div>
+    <h1>Pesan tema yang sudah kamu pilih.</h1>
+    <p class="sub">Di tahap ini user belum harus upload semua hal. Yang penting pilih tema, pilih paket, lalu kirim data awal. Foto bisa dikirim lewat link Google Drive, Telegram, atau WhatsApp setelah order masuk.</p>
+    <div class="layout">
+      <aside class="card">
+        <div id="themeVisual" class="card-top"></div>
+        <div class="card-body">
+          <strong id="themeName"></strong>
+          <p id="themeStyle"></p>
+          <div id="themeTags" class="meta"></div>
+          <div class="price">Harga mulai <span style="text-decoration: line-through; opacity: 0.55; font-size: 0.88rem; margin-right: 6px; font-weight: normal; color: var(--muted);">Rp59k</span><span id="themePrice"></span></div>
+        </div>
+      </aside>
+      <section class="formbox">
+        <h2 style="font-size:2rem">Form order awal</h2>
+        <p class="sub" style="margin-top:10px;max-width:none">Setelah form ini dikirim, sistem akan buka WhatsApp dengan data tema yang sudah terisi otomatis.</p>
+        <form id="orderForm">
+          <div class="row">
+            <label>Nama pemesan<input name="name" required placeholder="Nama lengkap"></label>
+            <label>Nomor WhatsApp<input name="phone" required placeholder="08xxxxxxxxxx"></label>
+          </div>
+          <div class="row">
+            <label>Tema terpilih<input id="themeField" name="theme" readonly></label>
+            <label>Paket
+              <select name="package_display" disabled style="background: rgba(0,0,0,0.03); cursor: not-allowed; opacity: 0.85;">
+                <option value="All-in-One 35k" selected>All-in-One 35k</option>
+              </select>
+              <input type="hidden" name="package" value="All-in-One 35k">
+            </label>
+          </div>
+          <div class="row">
+            <label>Tanggal acara<input name="date" placeholder="15 Desember 2026"></label>
+            <label>Kota / lokasi<input name="city" placeholder="Jakarta"></label>
+          </div>
+          <input type="hidden" name="ref" id="refField" value="">
+          <input type="hidden" name="price" id="priceField" value="">
+          <label>Link foto / bahan acara<input name="photos" placeholder="Link Google Drive / Telegram / catatan foto"></label>
+          <label>Catatan tambahan<textarea name="notes" placeholder="Contoh: minta nuansa lebih islami, dominan cream, atau mau cover WA juga."></textarea></label>
+          <div class="hint">Flow tambah foto paling simpel: customer kirim link Drive atau file setelah chat terbuka. Nanti kalau backend sudah siap, field ini bisa diganti jadi upload langsung.</div>
+          <div class="actions">
+            <button class="btn" type="submit">Lanjut ke WhatsApp</button>
+            <a class="ghost" id="demoLink" href="#">Lihat Demo Tema</a>
+          </div>
+          <div id="successBox" class="success">Sebentar, WhatsApp akan dibuka dengan data order yang sudah dirapikan.</div>
+        </form>
+      </section>
+    </div>
+  </div>
+  <script src="/themes.js?v=1.1.4"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const theme = window.getThemeBySlug(params.get("theme"));
+    const themeName = document.getElementById("themeName");
+    const themeStyle = document.getElementById("themeStyle");
+    const themeTags = document.getElementById("themeTags");
+    const themePrice = document.getElementById("themePrice");
+    const themeField = document.getElementById("themeField");
+    const themeVisual = document.getElementById("themeVisual");
+    const demoLink = document.getElementById("demoLink");
+    
+    themeName.textContent = theme.name;
+    themeStyle.textContent = theme.style;
+    themePrice.textContent = `Rp${theme.priceStart / 1000}k`;
+    themeField.value = theme.name;
+    themeTags.innerHTML = theme.tags.map(tag => `<span>${tag}</span>`).join("");
+    themeVisual.style.background = theme.previewGradient;
+    themeVisual.innerHTML = `<div><div style="font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;opacity:.84">${theme.category}</div><h3 style="font-size:2.4rem;margin-top:10px">${theme.name}</h3></div>`;
+    demoLink.href = theme.demoUrl || `/themes/${theme.slug}/index.html?id=demo-${theme.slug}`;
+
+    // Read Reseller Affiliate ID & Price parameters
+    const ref = params.get("ref") || "";
+    const customPrice = params.get("price") || "";
+    if (ref) {
+      document.getElementById("refField").value = ref;
+    }
+    if (customPrice) {
+      document.getElementById("priceField").value = customPrice;
+      themePrice.textContent = `Rp ${parseInt(customPrice).toLocaleString('id-ID')}`;
+      const packageSelect = document.querySelector("select[name='package_display']");
+      if (packageSelect) {
+        packageSelect.innerHTML = `<option value="Custom ${parseInt(customPrice)/1000}k" selected>All-in-One ${parseInt(customPrice)/1000}k</option>`;
+      }
+      document.querySelector("input[name='package']").value = `All-in-One ${parseInt(customPrice)/1000}k`;
+    }
+
+    document.getElementById("orderForm").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const customPriceVal = form.get("price");
+      const refVal = form.get("ref");
+      
+      const text = [
+        "Halo, saya mau pesan undangan digital.",
+        "",
+        `Tema: ${form.get("theme")}`,
+        `Paket: ${form.get("package")}`,
+        `Nama pemesan: ${form.get("name")}`,
+        `WhatsApp: ${form.get("phone")}`,
+        `Tanggal acara: ${form.get("date") || "-"}`,
+        `Kota/Lokasi: ${form.get("city") || "-"}`,
+        `Link foto/bahan: ${form.get("photos") || "-"}`,
+        refVal ? `Reseller Ref: ${refVal}` : "",
+        customPriceVal ? `Harga Khusus: Rp ${parseInt(customPriceVal).toLocaleString('id-ID')}` : "",
+        `Catatan: ${form.get("notes") || "-"}`,
+      ].filter(line => line !== "").join("\n");
+      
+      document.getElementById("successBox").style.display = "block";
+      location.href = `https://wa.me/6285798644642?text=${encodeURIComponent(text)}`;
+    });
+  </script>
+<script src="/assets/chat-widget.js?v=1.0.3" defer></script>
+</body>
+</html>

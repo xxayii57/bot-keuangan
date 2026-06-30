@@ -1,0 +1,6 @@
+{
+  "name": "Undangan Intim",
+  "description": "SaaS Wedding Invitation Builder premium, self-service mobile editor platform utilizing high-performance image compression, local notifications, and camera QR check-in.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
