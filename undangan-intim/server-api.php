@@ -5,8 +5,37 @@
  * Handles file uploads, invitation data persistent, and RSVP guest comments.
  */
 
-// Global config and Security settings
-header("Access-Control-Allow-Origin: *");
+// Load .env file if it exists
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+        if (strpos($line, '=') === false) continue;
+        list($key, $value) = explode('=', $line, 2);
+        $key = trim($key);
+        $value = trim($value);
+        if (!array_key_exists($key, $_ENV)) {
+            $_ENV[$key] = $value;
+            putenv("$key=$value");
+        }
+    }
+}
+
+// CORS: restrict to allowed origins
+$allowedOrigins = [
+    'https://intim.my.id',
+    'https://www.intim.my.id',
+    'http://localhost:8080',
+    'http://localhost:8088',
+    'http://localhost:3000',
+    'http://127.0.0.1:8080'
+];
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+if (in_array($origin, $allowedOrigins)) {
+    header("Access-Control-Allow-Origin: " . $origin);
+}
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
@@ -36,6 +65,9 @@ if (!is_dir($baseDataDir)) {
 if (!is_dir($baseUploadsDir)) {
     mkdir($baseUploadsDir, 0755, true);
 }
+
+// Initialize SQLite database (auto-migrates from JSON on first run)
+$db = initDatabase($baseDataDir);
 
 // Helper to get local music path based on theme slug (v1 -> song 1, v2 -> song 2 ... v11 -> song 1)
 function getThemeMusicUrl($themeSlug) {
@@ -82,7 +114,7 @@ if (empty($action)) {
 // Process routes securely
 switch ($action) {
     case 'save-invitation':
-        handleSaveInvitation($baseDataDir);
+        handleSaveInvitation($db);
         break;
 
     case 'upload-photo':
@@ -90,43 +122,46 @@ switch ($action) {
         break;
 
     case 'login':
-        handleLogin($baseDataDir);
+        checkRateLimit('login');
+        handleLogin($db);
         break;
 
     case 'order':
-        handleOrder($baseDataDir, $baseUploadsDir);
+        checkRateLimit('order');
+        handleOrder($db, $baseUploadsDir);
         break;
 
     case 'register-trial':
-        handleRegisterTrial($baseDataDir);
+        checkRateLimit('register');
+        handleRegisterTrial($db);
         break;
 
     case 'check-trial':
-        handleCheckTrial($baseDataDir);
+        handleCheckTrial($db);
         break;
 
     case 'reseller-login':
-        handleResellerLogin($baseDataDir);
+        handleResellerLogin($db);
         break;
 
     case 'checkin':
-        handleCheckin($baseDataDir);
+        handleCheckin($db);
         break;
 
     case 'comment':
-        handleComment($baseDataDir);
+        handleComment($db);
         break;
 
     case 'track-visit':
-        handleTrackVisit($baseDataDir);
+        handleTrackVisit($db);
         break;
 
     case 'create-sayabayar-invoice':
-        handleCreateSayaBayarInvoice($baseDataDir);
+        handleCreateSayaBayarInvoice($db);
         break;
 
     case 'sayabayar-callback':
-        handleSayaBayarCallback($baseDataDir);
+        handleSayaBayarCallback($db);
         break;
 
     default:
@@ -140,14 +175,13 @@ switch ($action) {
 
 /**
  * 1. POST /api/save-invitation
- * Accepts wedding invitation JSON payload and persists to disk.
+ * Accepts wedding invitation JSON payload and persists to SQLite.
  */
-function handleSaveInvitation($dataDir) {
+function handleSaveInvitation($db) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendError(405, "Method Not Allowed. Use POST.");
     }
 
-    // Capture payload
     $rawInput = file_get_contents("php://input");
     $data = json_decode($rawInput, true);
 
@@ -155,7 +189,6 @@ function handleSaveInvitation($dataDir) {
         sendError(400, "Malformed JSON Payload.");
     }
 
-    // Extract & Validate Slug
     $slug = isset($data['slug']) ? $data['slug'] : '';
     $slug = sanitizeSlug($slug);
 
@@ -163,62 +196,65 @@ function handleSaveInvitation($dataDir) {
         sendError(400, "Missing or invalid invitation slug identifier.");
     }
 
-    // Validate Full JSON Structure explicitly
     $requiredFields = [
-        'brideName' => 'string',
-        'groomName' => 'string',
-        'brideFullName' => 'string',
-        'groomFullName' => 'string',
-        'brideParents' => 'string',
-        'groomParents' => 'string',
-        'eventDateISO' => 'string',
-        'akadTime' => 'string',
-        'resepsiTime' => 'string',
-        'venueName' => 'string',
-        'venueAddress' => 'string',
-        'mapsUrl' => 'string',
-        'musicUrl' => 'string',
-        'videoUrl' => 'string',
-        'bankName' => 'string',
-        'bankNumber' => 'string',
-        'bankHolder' => 'string',
-        'walletName' => 'string',
-        'walletNumber' => 'string',
-        'showVideo' => 'boolean',
-        'showGallery' => 'boolean',
-        'enableRsvp' => 'boolean',
-        'gallery' => 'array'
+        'brideName', 'groomName', 'brideFullName', 'groomFullName',
+        'brideParents', 'groomParents', 'eventDateISO', 'akadTime',
+        'resepsiTime', 'venueName', 'venueAddress', 'mapsUrl',
+        'musicUrl', 'videoUrl', 'bankName', 'bankNumber', 'bankHolder',
+        'walletName', 'walletNumber'
     ];
-
-    foreach ($requiredFields as $field => $type) {
+    foreach ($requiredFields as $field) {
         if (!isset($data[$field])) {
             sendError(400, "Missing required payload field: {$field}");
         }
-        $actualType = gettype($data[$field]);
-        if ($type === 'boolean' && $actualType !== 'boolean') {
-            // Permit string or integer conversion for loose forms
-            $data[$field] = filter_var($data[$field], FILTER_VALIDATE_BOOLEAN);
-        } elseif ($type === 'array' && $actualType !== 'array') {
-            sendError(400, "Field '{$field}' must be of type array.");
-        }
     }
 
-    // Prevent Directory Traversal & Write JSON
-    $safeFilePath = $dataDir . "/" . $slug . ".json";
-    
-    // Format JSON pretty print for high readability
-    $jsonOutput = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    
-    if (file_put_contents($safeFilePath, $jsonOutput) !== false) {
-        sendResponse([
-            "status" => "success",
-            "message" => "Invitation settings saved successfully.",
-            "slug" => $slug,
-            "file_path" => $safeFilePath
-        ]);
-    } else {
-        sendError(500, "Failed writing data file. Check storage write permissions.");
-    }
+    $stmt = $db->prepare("INSERT OR REPLACE INTO invitations (slug, password, status, trial_expires_at, active, visits, order_name, order_phone, order_email, order_theme, ref, price, brideName, groomName, brideFullName, groomFullName, brideParents, groomParents, eventDateISO, akadTime, resepsiTime, venueName, venueAddress, mapsUrl, musicUrl, videoUrl, bankName, bankNumber, bankHolder, walletName, walletNumber, showVideo, showGallery, enableRsvp, gallery, story, updated_at) VALUES (:slug, :password, :status, :trial_expires_at, :active, :visits, :order_name, :order_phone, :order_email, :order_theme, :ref, :price, :brideName, :groomName, :brideFullName, :groomFullName, :brideParents, :groomParents, :eventDateISO, :akadTime, :resepsiTime, :venueName, :venueAddress, :mapsUrl, :musicUrl, :videoUrl, :bankName, :bankNumber, :bankHolder, :walletName, :walletNumber, :showVideo, :showGallery, :enableRsvp, :gallery, :story, datetime('now'))");
+
+    $stmt->execute([
+        ':slug' => $slug,
+        ':password' => $data['password'] ?? '',
+        ':status' => $data['status'] ?? 'active',
+        ':trial_expires_at' => $data['trial_expires_at'] ?? null,
+        ':active' => isset($data['active']) ? (int)$data['active'] : 1,
+        ':visits' => $data['visits'] ?? 0,
+        ':order_name' => $data['order_name'] ?? '',
+        ':order_phone' => $data['order_phone'] ?? '',
+        ':order_email' => $data['order_email'] ?? '',
+        ':order_theme' => $data['order_theme'] ?? 'v9',
+        ':ref' => $data['ref'] ?? '',
+        ':price' => $data['price'] ?? 35000,
+        ':brideName' => $data['brideName'] ?? '',
+        ':groomName' => $data['groomName'] ?? '',
+        ':brideFullName' => $data['brideFullName'] ?? '',
+        ':groomFullName' => $data['groomFullName'] ?? '',
+        ':brideParents' => $data['brideParents'] ?? '',
+        ':groomParents' => $data['groomParents'] ?? '',
+        ':eventDateISO' => $data['eventDateISO'] ?? '',
+        ':akadTime' => $data['akadTime'] ?? '',
+        ':resepsiTime' => $data['resepsiTime'] ?? '',
+        ':venueName' => $data['venueName'] ?? '',
+        ':venueAddress' => $data['venueAddress'] ?? '',
+        ':mapsUrl' => $data['mapsUrl'] ?? '',
+        ':musicUrl' => $data['musicUrl'] ?? '',
+        ':videoUrl' => $data['videoUrl'] ?? '',
+        ':bankName' => $data['bankName'] ?? '',
+        ':bankNumber' => $data['bankNumber'] ?? '',
+        ':bankHolder' => $data['bankHolder'] ?? '',
+        ':walletName' => $data['walletName'] ?? '',
+        ':walletNumber' => $data['walletNumber'] ?? '',
+        ':showVideo' => isset($data['showVideo']) ? (int)$data['showVideo'] : 0,
+        ':showGallery' => isset($data['showGallery']) ? (int)$data['showGallery'] : 1,
+        ':enableRsvp' => isset($data['enableRsvp']) ? (int)$data['enableRsvp'] : 1,
+        ':gallery' => json_encode($data['gallery'] ?? []),
+        ':story' => json_encode($data['story'] ?? [])
+    ]);
+
+    sendResponse([
+        "status" => "success",
+        "message" => "Invitation settings saved successfully.",
+        "slug" => $slug
+    ]);
 }
 
 /**
@@ -280,9 +316,9 @@ function handleUploadPhoto($uploadsDir) {
 
 /**
  * 3. POST /api/checkin
- * Scans QR attendance and logs timestamp to JSON file.
+ * Scans QR attendance and logs timestamp to SQLite.
  */
-function handleCheckin($dataDir) {
+function handleCheckin($db) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendError(405, "Method Not Allowed. Use POST.");
     }
@@ -297,40 +333,30 @@ function handleCheckin($dataDir) {
         sendError(400, "Missing slug or guest ID parameter.");
     }
 
-    $attendancePath = $dataDir . "/" . $slug . "_attendance.json";
-
-    // Load existing log
-    $logs = [];
-    if (file_exists($attendancePath)) {
-        $rawLogs = file_get_contents($attendancePath);
-        $logs = json_decode($rawLogs, true) ?: [];
-    }
-
-    // Create timestamp
     $timestamp = date('Y-m-d H:i:s');
-    $logs[] = [
-        "guest_id" => $guestId,
-        "timestamp" => $timestamp,
-        "agent" => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Capacitor Android Client'
-    ];
+    $agent = $_SERVER['HTTP_USER_AGENT'] ?? 'Capacitor Android Client';
 
-    if (file_put_contents($attendancePath, json_encode($logs, JSON_PRETTY_PRINT)) !== false) {
-        sendResponse([
-            "status" => "success",
-            "message" => "Guest attendance checked in successfully.",
-            "guest_id" => $guestId,
-            "timestamp" => $timestamp
-        ]);
-    } else {
-        sendError(500, "Failed updating attendance files.");
-    }
+    $stmt = $db->prepare("INSERT INTO attendance (slug, guest_id, timestamp, agent) VALUES (:slug, :guest_id, :timestamp, :agent)");
+    $stmt->execute([
+        ':slug' => $slug,
+        ':guest_id' => $guestId,
+        ':timestamp' => $timestamp,
+        ':agent' => $agent
+    ]);
+
+    sendResponse([
+        "status" => "success",
+        "message" => "Guest attendance checked in successfully.",
+        "guest_id" => $guestId,
+        "timestamp" => $timestamp
+    ]);
 }
 
 /**
  * 4. GET & POST /api/comment
- * Interface with the wishes guestbook comments logs.
+ * Interface with the wishes guestbook comments via SQLite.
  */
-function handleComment($dataDir) {
+function handleComment($db) {
     $method = $_SERVER['REQUEST_METHOD'];
     $slug = isset($_REQUEST['slug']) ? $_REQUEST['slug'] : '';
     $slug = sanitizeSlug($slug);
@@ -339,61 +365,49 @@ function handleComment($dataDir) {
         sendError(400, "Missing client invitation slug identifier.");
     }
 
-    $commentPath = $dataDir . "/" . $slug . "_comments.json";
-
     if ($method === 'GET') {
-        // Load wishes guestbook
-        if (file_exists($commentPath)) {
-            $comments = json_decode(file_get_contents($commentPath), true) ?: [];
-        } else {
-            // Seed a default warm greeting comment
-            $comments = [
-                [
-                    "name" => "Riana & Roni",
-                    "comment" => "Selamat menempuh hidup baru Aria & Bima! Semoga sakinah mawaddah warahmah, dilancarkan sampai hari H yaa! 🤍✨",
-                    "attendance" => "Hadir",
-                    "timestamp" => date('Y-m-d H:i:s', time() - 3600 * 2)
-                ]
+        $stmt = $db->prepare("SELECT name, comment, attendance, timestamp FROM comments WHERE slug = :slug ORDER BY id ASC");
+        $stmt->execute([':slug' => $slug]);
+        $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($comments)) {
+            $default = [
+                "name" => "Riana & Roni",
+                "comment" => "Selamat menempuh hidup baru Aria & Bima! Semoga sakinah mawaddah warahmah, dilancarkan sampai hari H yaa!",
+                "attendance" => "Hadir",
+                "timestamp" => date('Y-m-d H:i:s', time() - 3600 * 2)
             ];
-            file_put_contents($commentPath, json_encode($comments, JSON_PRETTY_PRINT));
+            $ins = $db->prepare("INSERT INTO comments (slug, name, comment, attendance, timestamp) VALUES (:slug, :name, :comment, :attendance, :timestamp)");
+            $ins->execute([':slug' => $slug, ':name' => $default['name'], ':comment' => $default['comment'], ':attendance' => $default['attendance'], ':timestamp' => $default['timestamp']]);
+            $comments[] = $default;
         }
 
-        sendResponse([
-            "status" => "success",
-            "comments" => $comments
-        ]);
+        sendResponse(["status" => "success", "comments" => $comments]);
 
     } elseif ($method === 'POST') {
-        // Post new guest wish
         $name = isset($_POST['name']) ? trim(strip_tags($_POST['name'])) : '';
         $comment = isset($_POST['comment']) ? trim(strip_tags($_POST['comment'])) : '';
-        $attendance = isset($_POST['attendance']) ? trim(strip_tags($_POST['attendance'])) : 'Hadir'; // Hadir, Tidak Hadir, Ragu-ragu
+        $attendance = isset($_POST['attendance']) ? trim(strip_tags($_POST['attendance'])) : 'Hadir';
 
         if (empty($name) || empty($comment)) {
             sendError(400, "Name and comment message are required.");
         }
 
-        $comments = [];
-        if (file_exists($commentPath)) {
-            $comments = json_decode(file_get_contents($commentPath), true) ?: [];
-        }
+        $timestamp = date('Y-m-d H:i:s');
+        $stmt = $db->prepare("INSERT INTO comments (slug, name, comment, attendance, timestamp) VALUES (:slug, :name, :comment, :attendance, :timestamp)");
+        $stmt->execute([
+            ':slug' => $slug,
+            ':name' => $name,
+            ':comment' => $comment,
+            ':attendance' => $attendance,
+            ':timestamp' => $timestamp
+        ]);
 
-        $comments[] = [
-            "name" => $name,
-            "comment" => $comment,
-            "attendance" => $attendance,
-            "timestamp" => date('Y-m-d H:i:s')
-        ];
-
-        if (file_put_contents($commentPath, json_encode($comments, JSON_PRETTY_PRINT)) !== false) {
-            sendResponse([
-                "status" => "success",
-                "message" => "Wish comment added to guestbook.",
-                "comment" => $comments[count($comments) - 1]
-            ]);
-        } else {
-            sendError(500, "Failed saving your wish to the guestbook.");
-        }
+        sendResponse([
+            "status" => "success",
+            "message" => "Wish comment added to guestbook.",
+            "comment" => ["name" => $name, "comment" => $comment, "attendance" => $attendance, "timestamp" => $timestamp]
+        ]);
     } else {
         sendError(405, "Method Not Allowed.");
     }
@@ -437,10 +451,266 @@ function sendResponse($payload) {
 }
 
 /**
- * 5. POST /api/login
- * Verifies slug credentials against static client JSON files.
+ * Rate limiter — file-based throttle per IP + action.
+ * Limits: login 5/min, order 10/hour, general 30/min
  */
-function handleLogin($dataDir) {
+function checkRateLimit($action) {
+    $limits = [
+        'login'    => ['max' => 5,  'window' => 60],
+        'order'    => ['max' => 10, 'window' => 3600],
+        'register' => ['max' => 5,  'window' => 60],
+        'general'  => ['max' => 30, 'window' => 60],
+    ];
+    
+    if (!isset($limits[$action])) $action = 'general';
+    $cfg = $limits[$action];
+    
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    $key = md5($ip . '_' . $action);
+    $rateDir = sys_get_temp_dir() . '/undangan_rates';
+    if (!is_dir($rateDir)) mkdir($rateDir, 0755, true);
+    
+    $rateFile = $rateDir . '/' . $key . '.json';
+    $now = time();
+    
+    $data = ['attempts' => [], 'blocked_until' => 0];
+    if (file_exists($rateFile)) {
+        $raw = file_get_contents($rateFile);
+        $data = json_decode($raw, true) ?: $data;
+    }
+    
+    // Check if currently blocked
+    if (isset($data['blocked_until']) && $data['blocked_until'] > $now) {
+        $retryAfter = $data['blocked_until'] - $now;
+        header("Retry-After: $retryAfter");
+        sendError(429, "Terlalu banyak percobaan. Coba lagi dalam {$retryAfter} detik.");
+    }
+    
+    // Purge expired attempts
+    $data['attempts'] = array_values(array_filter($data['attempts'], function($t) use ($now, $cfg) {
+        return $t > ($now - $cfg['window']);
+    }));
+    
+    // Check limit
+    if (count($data['attempts']) >= $cfg['max']) {
+        $data['blocked_until'] = $now + $cfg['window'];
+        file_put_contents($rateFile, json_encode($data));
+        header("Retry-After: {$cfg['window']}");
+        sendError(429, "Batas percobaan tercapai. Coba lagi dalam {$cfg['window']} detik.");
+    }
+    
+    // Record this attempt
+    $data['attempts'][] = $now;
+    file_put_contents($rateFile, json_encode($data));
+}
+
+/**
+ * Initialize SQLite database and migrate from JSON if first run.
+ */
+function initDatabase($dataDir) {
+    $dbPath = $dataDir . '/undangan.db';
+    $db = new PDO('sqlite:' . $dbPath);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $db->exec('PRAGMA journal_mode=WAL');
+    $db->exec('PRAGMA foreign_keys=ON');
+    
+    // Create tables
+    $db->exec("CREATE TABLE IF NOT EXISTS invitations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT UNIQUE NOT NULL,
+        password TEXT,
+        status TEXT DEFAULT 'active',
+        trial_expires_at INTEGER,
+        active INTEGER DEFAULT 1,
+        visits INTEGER DEFAULT 0,
+        order_name TEXT,
+        order_phone TEXT,
+        order_email TEXT,
+        order_theme TEXT,
+        ref TEXT,
+        price INTEGER DEFAULT 35000,
+        brideName TEXT,
+        groomName TEXT,
+        brideFullName TEXT,
+        groomFullName TEXT,
+        brideParents TEXT,
+        groomParents TEXT,
+        eventDateISO TEXT,
+        akadTime TEXT,
+        resepsiTime TEXT,
+        venueName TEXT,
+        venueAddress TEXT,
+        mapsUrl TEXT,
+        musicUrl TEXT,
+        videoUrl TEXT,
+        bankName TEXT,
+        bankNumber TEXT,
+        bankHolder TEXT,
+        walletName TEXT,
+        walletNumber TEXT,
+        showVideo INTEGER DEFAULT 0,
+        showGallery INTEGER DEFAULT 1,
+        enableRsvp INTEGER DEFAULT 1,
+        gallery TEXT DEFAULT '[]',
+        story TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+    
+    $db->exec("CREATE TABLE IF NOT EXISTS comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL,
+        name TEXT,
+        comment TEXT,
+        attendance TEXT DEFAULT 'Hadir',
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+    
+    $db->exec("CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL,
+        guest_id TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        agent TEXT
+    )");
+    
+    $db->exec("CREATE TABLE IF NOT EXISTS resellers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        affiliate_id TEXT,
+        points INTEGER DEFAULT 0,
+        withdrawals INTEGER DEFAULT 0
+    )");
+    
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_inv_slug ON invitations(slug)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_inv_status ON invitations(status)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_cmt_slug ON comments(slug)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_att_slug ON attendance(slug)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_res_email ON resellers(email)");
+    
+    // Auto-migrate from JSON if migration not done yet
+    $migrationFlag = $dataDir . '/.sqlite_migrated';
+    if (!file_exists($migrationFlag)) {
+        migrateJsonToSqlite($db, $dataDir);
+        file_put_contents($migrationFlag, date('Y-m-d H:i:s'));
+    }
+    
+    return $db;
+}
+
+/**
+ * Migrate all JSON files to SQLite tables.
+ */
+function migrateJsonToSqlite($db, $dataDir) {
+    $files = glob($dataDir . '/*.json');
+    if (!$files) return;
+    
+    $invStmt = $db->prepare("INSERT OR IGNORE INTO invitations (slug, password, status, trial_expires_at, active, visits, order_name, order_phone, order_email, order_theme, ref, price, brideName, groomName, brideFullName, groomFullName, brideParents, groomParents, eventDateISO, akadTime, resepsiTime, venueName, venueAddress, mapsUrl, musicUrl, videoUrl, bankName, bankNumber, bankHolder, walletName, walletNumber, showVideo, showGallery, enableRsvp, gallery, story) VALUES (:slug, :password, :status, :trial_expires_at, :active, :visits, :order_name, :order_phone, :order_email, :order_theme, :ref, :price, :brideName, :groomName, :brideFullName, :groomFullName, :brideParents, :groomParents, :eventDateISO, :akadTime, :resepsiTime, :venueName, :venueAddress, :mapsUrl, :musicUrl, :videoUrl, :bankName, :bankNumber, :bankHolder, :walletName, :walletNumber, :showVideo, :showGallery, :enableRsvp, :gallery, :story)");
+    
+    $cmtStmt = $db->prepare("INSERT INTO comments (slug, name, comment, attendance, timestamp) VALUES (:slug, :name, :comment, :attendance, :timestamp)");
+    $attStmt = $db->prepare("INSERT INTO attendance (slug, guest_id, timestamp, agent) VALUES (:slug, :guest_id, :timestamp, :agent)");
+    $resStmt = $db->prepare("INSERT OR IGNORE INTO resellers (email, affiliate_id, points, withdrawals) VALUES (:email, :affiliate_id, :points, :withdrawals)");
+    
+    $db->beginTransaction();
+    try {
+        foreach ($files as $file) {
+            $basename = basename($file, '.json');
+            $data = json_decode(file_get_contents($file), true);
+            if (!$data) continue;
+            
+            // Comments file
+            if (substr($basename, -9) === '_comments') {
+                $slug = substr($basename, 0, -9);
+                foreach ($data as $c) {
+                    $cmtStmt->execute([
+                        ':slug' => $slug,
+                        ':name' => $c['name'] ?? '',
+                        ':comment' => $c['comment'] ?? '',
+                        ':attendance' => $c['attendance'] ?? 'Hadir',
+                        ':timestamp' => $c['timestamp'] ?? date('Y-m-d H:i:s')
+                    ]);
+                }
+                continue;
+            }
+            
+            // Attendance file
+            if (substr($basename, -11) === '_attendance') {
+                $slug = substr($basename, 0, -11);
+                foreach ($data as $a) {
+                    $attStmt->execute([
+                        ':slug' => $slug,
+                        ':guest_id' => $a['guest_id'] ?? '',
+                        ':timestamp' => $a['timestamp'] ?? date('Y-m-d H:i:s'),
+                        ':agent' => $a['agent'] ?? ''
+                    ]);
+                }
+                continue;
+            }
+            
+            // Reseller file
+            if (strpos($basename, 'reseller_') === 0) {
+                $resStmt->execute([
+                    ':email' => $data['email'] ?? '',
+                    ':affiliate_id' => $data['affiliateId'] ?? '',
+                    ':points' => $data['points'] ?? 0,
+                    ':withdrawals' => $data['withdrawals'] ?? 0
+                ]);
+                continue;
+            }
+            
+            // Invitation file
+            if (!isset($data['slug'])) continue;
+            $invStmt->execute([
+                ':slug' => $data['slug'],
+                ':password' => $data['password'] ?? '',
+                ':status' => $data['status'] ?? 'active',
+                ':trial_expires_at' => $data['trial_expires_at'] ?? null,
+                ':active' => isset($data['active']) ? (int)$data['active'] : 1,
+                ':visits' => $data['visits'] ?? 0,
+                ':order_name' => $data['order_name'] ?? '',
+                ':order_phone' => $data['order_phone'] ?? '',
+                ':order_email' => $data['order_email'] ?? '',
+                ':order_theme' => $data['order_theme'] ?? 'v9',
+                ':ref' => $data['ref'] ?? '',
+                ':price' => $data['price'] ?? 35000,
+                ':brideName' => $data['brideName'] ?? '',
+                ':groomName' => $data['groomName'] ?? '',
+                ':brideFullName' => $data['brideFullName'] ?? '',
+                ':groomFullName' => $data['groomFullName'] ?? '',
+                ':brideParents' => $data['brideParents'] ?? '',
+                ':groomParents' => $data['groomParents'] ?? '',
+                ':eventDateISO' => $data['eventDateISO'] ?? '',
+                ':akadTime' => $data['akadTime'] ?? '',
+                ':resepsiTime' => $data['resepsiTime'] ?? '',
+                ':venueName' => $data['venueName'] ?? '',
+                ':venueAddress' => $data['venueAddress'] ?? '',
+                ':mapsUrl' => $data['mapsUrl'] ?? '',
+                ':musicUrl' => $data['musicUrl'] ?? '',
+                ':videoUrl' => $data['videoUrl'] ?? '',
+                ':bankName' => $data['bankName'] ?? '',
+                ':bankNumber' => $data['bankNumber'] ?? '',
+                ':bankHolder' => $data['bankHolder'] ?? '',
+                ':walletName' => $data['walletName'] ?? '',
+                ':walletNumber' => $data['walletNumber'] ?? '',
+                ':showVideo' => isset($data['showVideo']) ? (int)$data['showVideo'] : 0,
+                ':showGallery' => isset($data['showGallery']) ? (int)$data['showGallery'] : 1,
+                ':enableRsvp' => isset($data['enableRsvp']) ? (int)$data['enableRsvp'] : 1,
+                ':gallery' => json_encode($data['gallery'] ?? []),
+                ':story' => json_encode($data['story'] ?? [])
+            ]);
+        }
+        $db->commit();
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("Migration failed: " . $e->getMessage());
+    }
+}
+
+/**
+ * 5. POST /api/login
+ * Verifies slug credentials against SQLite.
+ */
+function handleLogin($db) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendError(405, "Method Not Allowed. Use POST.");
     }
@@ -450,31 +720,34 @@ function handleLogin($dataDir) {
     
     $slug = isset($data['slug']) ? sanitizeSlug($data['slug']) : '';
     $password = isset($data['password']) ? $data['password'] : '';
-    $ref = isset($data['ref']) ? trim($data['ref']) : '';
-    $price = isset($data['price']) ? intval($data['price']) : 35000;
     
     if (empty($slug) || empty($password)) {
         sendError(400, "Username (Slug) dan Sandi harus diisi.");
     }
     
-    $filePath = $dataDir . "/" . $slug . ".json";
-    if (!file_exists($filePath)) {
+    $stmt = $db->prepare("SELECT * FROM invitations WHERE slug = :slug");
+    $stmt->execute([':slug' => $slug]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$row) {
         sendError(404, "Undangan dengan slug '{$slug}' tidak ditemukan.");
     }
     
-    $fileData = json_decode(file_get_contents($filePath), true);
+    $storedPassword = $row['password'] ?? '';
     
-    // Validate stored password
-    $storedPassword = isset($fileData['password']) ? $fileData['password'] : '';
-    
-    // Support legacy invitations which don't have password attribute
-    if (!empty($storedPassword) && $storedPassword !== $password) {
-        sendError(401, "Sandi yang Anda masukkan salah.");
+    if (!empty($storedPassword)) {
+        if (password_verify($password, $storedPassword)) {
+            if (password_needs_rehash($storedPassword, PASSWORD_DEFAULT)) {
+                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                $upd = $db->prepare("UPDATE invitations SET password = :pw WHERE slug = :slug");
+                $upd->execute([':pw' => $newHash, ':slug' => $slug]);
+            }
+        } else {
+            sendError(401, "Sandi yang Anda masukkan salah.");
+        }
     }
     
-    // Validate billing verification status
-    $status = isset($fileData['status']) ? $fileData['status'] : 'active';
-    if ($status === 'pending_payment') {
+    if ($row['status'] === 'pending_payment') {
         sendError(403, "Pembayaran belum diverifikasi. Akun Anda sedang dalam proses aktivasi.");
     }
     
@@ -483,7 +756,7 @@ function handleLogin($dataDir) {
         "message" => "Login berhasil.",
         "slug" => $slug,
         "role" => "client",
-        "data" => $fileData
+        "data" => $row
     ]);
 }
 
@@ -491,7 +764,7 @@ function handleLogin($dataDir) {
  * 6. POST /api/order
  * Receives new orders, receipt screenshots, and creates inactive client accounts.
  */
-function handleOrder($dataDir, $uploadsDir) {
+function handleOrder($db, $uploadsDir) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendError(405, "Method Not Allowed. Use POST.");
     }
@@ -513,17 +786,13 @@ function handleOrder($dataDir, $uploadsDir) {
         sendError(400, "Semua data wajib diisi, termasuk bukti transfer.");
     }
     
-    $filePath = $dataDir . "/" . $slug . ".json";
-    $existingData = [];
-    if (file_exists($filePath)) {
-        $existingData = json_decode(file_get_contents($filePath), true);
-        $existingStatus = isset($existingData['status']) ? $existingData['status'] : 'active';
-        if ($existingStatus !== 'trial') {
-            sendError(409, "Slug '{$slug}' sudah digunakan. Silakan pilih nama slug lain.");
-        }
+    $check = $db->prepare("SELECT status FROM invitations WHERE slug = :slug");
+    $check->execute([':slug' => $slug]);
+    $existing = $check->fetch(PDO::FETCH_ASSOC);
+    if ($existing && $existing['status'] !== 'trial') {
+        sendError(409, "Slug '{$slug}' sudah digunakan. Silakan pilih nama slug lain.");
     }
     
-    // Decode receipt image
     if (preg_match('/^data:image\/(\w+);base64,/', $receiptBase64, $matches)) {
         $receiptBase64 = substr($receiptBase64, strpos($receiptBase64, ',') + 1);
     }
@@ -532,114 +801,61 @@ function handleOrder($dataDir, $uploadsDir) {
         sendError(400, "Bukti transfer tidak valid.");
     }
     
-    $receiptFileName = "receipt_{$slug}.webp";
-    $receiptPath = $uploadsDir . "/" . $receiptFileName;
-    file_put_contents($receiptPath, $decodedReceipt);
+    file_put_contents($uploadsDir . "/receipt_{$slug}.webp", $decodedReceipt);
     
-    // Default template data values for the newly created invitation
-    $newInvitation = array_merge($existingData, [
-        "slug" => $slug,
-        "password" => $password,
-        "status" => "pending_payment",
-        "visits" => isset($existingData['visits']) ? $existingData['visits'] : 0,
-        "order_name" => $name,
-        "order_phone" => $phone,
-        "order_email" => $email,
-        "order_theme" => $theme,
-        "ref" => $ref,
-        "price" => $price,
+    $parts = explode('-', $slug);
+    $parsedGroom = "Budi";
+    $parsedBride = "Siti";
+    if (count($parts) >= 2) { $parsedGroom = ucfirst(trim($parts[0])); $parsedBride = ucfirst(trim($parts[1])); }
+    elseif (count($parts) === 1) { $parsedGroom = ucfirst(trim($parts[0])); }
+
+    $stmt = $db->prepare("INSERT OR REPLACE INTO invitations (slug, password, status, active, visits, order_name, order_phone, order_email, order_theme, ref, price, brideName, groomName, brideFullName, groomFullName, brideParents, groomParents, eventDateISO, akadTime, resepsiTime, venueName, venueAddress, mapsUrl, musicUrl, videoUrl, bankName, bankNumber, bankHolder, walletName, walletNumber, showVideo, showGallery, enableRsvp, gallery, story, updated_at) VALUES (:slug, :password, 'pending_payment', 1, 0, :order_name, :order_phone, :order_email, :order_theme, :ref, :price, :brideName, :groomName, :brideFullName, :groomFullName, :brideParents, :groomParents, :eventDateISO, :akadTime, :resepsiTime, :venueName, :venueAddress, :mapsUrl, :musicUrl, :videoUrl, :bankName, :bankNumber, :bankHolder, :walletName, :walletNumber, 0, 1, 1, :gallery, :story, datetime('now'))");
+    
+    $gallery = json_encode(["https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300&auto=format&fit=crop","https://images.unsplash.com/photo-1583939003579-730e3918a45a?q=80&w=300&auto=format&fit=crop","https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=300&auto=format&fit=crop"]);
+    $story = json_encode([["title" => "Pertemuan Pertama", "date" => "2024", "description" => "Awal mula cerita kami dimulai dari sini."]]);
+    
+    $stmt->execute([
+        ':slug' => $slug, ':password' => password_hash($password, PASSWORD_DEFAULT),
+        ':order_name' => $name, ':order_phone' => $phone, ':order_email' => $email,
+        ':order_theme' => $theme, ':ref' => $ref, ':price' => $price,
+        ':brideName' => $parsedBride, ':groomName' => $parsedGroom,
+        ':brideFullName' => $parsedBride, ':groomFullName' => $parsedGroom,
+        ':brideParents' => "Putri tercinta dari Bapak H. Ahmad & Ibu Hj. Siti",
+        ':groomParents' => "Putra tercinta dari Bapak Rahmat & Ibu Lina",
+        ':eventDateISO' => date('Y-m-d', strtotime('+30 days')),
+        ':akadTime' => "08:00 WIB - selesai", ':resepsiTime' => "11:00 WIB - selesai",
+        ':venueName' => "Gedung Serbaguna Harmoni", ':venueAddress' => "Jl. Harmoni Indah No. 12, Jakarta",
+        ':mapsUrl' => "https://maps.google.com", ':musicUrl' => getThemeMusicUrl($theme),
+        ':videoUrl' => "", ':bankName' => "BCA", ':bankNumber' => "1234567890",
+        ':bankHolder' => "Budi Santoso", ':walletName' => "DANA", ':walletNumber' => $phone,
+        ':gallery' => $gallery, ':story' => $story
     ]);
     
-    $defaults = [
-        "brideName" => "Siti",
-        "groomName" => "Budi",
-        "brideFullName" => "Siti Rahmaawati, S.Psi",
-        "groomFullName" => "Budi Santoso, S.Kom",
-        "brideParents" => "Putri tercinta dari Bapak H. Ahmad & Ibu Hj. Siti",
-        "groomParents" => "Putra tercinta dari Bapak Rahmat & Ibu Lina",
-        "eventDateISO" => date('Y-m-d', strtotime('+30 days')),
-        "akadTime" => "08:00 WIB - selesai",
-        "resepsiTime" => "11:00 WIB - selesai",
-        "venueName" => "Gedung Serbaguna Harmoni",
-        "venueAddress" => "Jl. Harmoni Indah No. 12, Jakarta",
-        "mapsUrl" => "https://maps.google.com",
-        "musicUrl" => getThemeMusicUrl($theme),
-        "videoUrl" => "",
-        "bankName" => "BCA",
-        "bankNumber" => "1234567890",
-        "bankHolder" => "Budi Santoso",
-        "walletName" => "DANA",
-        "walletNumber" => $phone,
-        "showVideo" => false,
-        "showGallery" => true,
-        "enableRsvp" => true,
-        "gallery" => [
-            "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1583939003579-730e3918a45a?q=80&w=300&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=300&auto=format&fit=crop"
-        ],
-        "story" => [
-            ["title" => "Pertemuan Pertama", "date" => "2024", "description" => "Awal mula cerita kami dimulai dari sini."]
-        ]
-    ];
-    
-    foreach ($defaults as $key => $val) {
-        if (!isset($newInvitation[$key])) {
-            $newInvitation[$key] = $val;
-        }
-    }
-    
-    $jsonOutput = json_encode($newInvitation, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    if (file_put_contents($filePath, $jsonOutput) !== false) {
-        sendResponse([
-            "status" => "success",
-            "message" => "Pendaftaran berhasil, menunggu aktivasi pembayaran.",
-            "slug" => $slug
-        ]);
-    } else {
-        sendError(500, "Gagal memproses pendaftaran di server.");
-    }
+    sendResponse(["status" => "success", "message" => "Pendaftaran berhasil, menunggu aktivasi pembayaran.", "slug" => $slug]);
 }
 
-/**
- * Handles checking if trial has expired or invitation is inactive.
- */
-function handleCheckTrial($dataDir) {
+function handleCheckTrial($db) {
     $slug = isset($_GET['slug']) ? sanitizeSlug($_GET['slug']) : '';
-    if (empty($slug)) {
-        sendResponse(["expired" => true, "reason" => "missing_slug"]);
+    if (empty($slug)) { sendResponse(["expired" => true, "reason" => "missing_slug"]); }
+    
+    $stmt = $db->prepare("SELECT status, trial_expires_at, active FROM invitations WHERE slug = :slug");
+    $stmt->execute([':slug' => $slug]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$row) { sendResponse(["expired" => true, "reason" => "not_found"]); }
+    
+    if ($row['status'] === 'trial' && time() > intval($row['trial_expires_at'])) {
+        sendResponse(["expired" => true, "reason" => "trial_expired", "trial_expires_at" => intval($row['trial_expires_at'])]);
     }
-    
-    $filePath = $dataDir . "/" . $slug . ".json";
-    if (!file_exists($filePath)) {
-        sendResponse(["expired" => true, "reason" => "not_found"]);
-    }
-    
-    $fileData = json_decode(file_get_contents($filePath), true);
-    $status = isset($fileData['status']) ? $fileData['status'] : 'active';
-    
-    if ($status === 'trial') {
-        $expiresAt = isset($fileData['trial_expires_at']) ? intval($fileData['trial_expires_at']) : 0;
-        if (time() > $expiresAt) {
-            sendResponse(["expired" => true, "reason" => "trial_expired", "trial_expires_at" => $expiresAt]);
-        }
-    }
-    
-    $active = isset($fileData['active']) ? (bool)$fileData['active'] : true;
-    if (!$active || $status === 'pending_payment') {
+    if (!$row['active'] || $row['status'] === 'pending_payment') {
         sendResponse(["expired" => true, "reason" => "inactive"]);
     }
     
     sendResponse(["expired" => false]);
 }
 
-/**
- * Handles registering a 1-day trial client.
- */
-function handleRegisterTrial($dataDir) {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        sendError(405, "Method Not Allowed. Use POST.");
-    }
+function handleRegisterTrial($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { sendError(405, "Method Not Allowed. Use POST."); }
     
     $rawInput = file_get_contents("php://input");
     $data = json_decode($rawInput, true);
@@ -653,188 +869,98 @@ function handleRegisterTrial($dataDir) {
     $ref = isset($data['ref']) ? trim($data['ref']) : '';
     $price = isset($data['price']) ? intval($data['price']) : 35000;
     
-    if (empty($name) || empty($phone) || empty($slug) || empty($password)) {
-        sendError(400, "Semua data wajib diisi untuk daftar trial.");
+    if (empty($name) || empty($phone) || empty($slug) || empty($password)) { sendError(400, "Semua data wajib diisi untuk daftar trial."); }
+    
+    $check = $db->prepare("SELECT status FROM invitations WHERE slug = :slug");
+    $check->execute([':slug' => $slug]);
+    $existing = $check->fetch(PDO::FETCH_ASSOC);
+    if ($existing && $existing['status'] !== 'trial') {
+        sendError(409, "Slug '{$slug}' sudah digunakan. Silakan pilih nama slug lain.");
     }
     
-    $filePath = $dataDir . "/" . $slug . ".json";
-    $existingData = [];
-    if (file_exists($filePath)) {
-        $existingData = json_decode(file_get_contents($filePath), true);
-        $existingStatus = isset($existingData['status']) ? $existingData['status'] : 'active';
-        if ($existingStatus !== 'trial') {
-            sendError(409, "Slug '{$slug}' sudah digunakan. Silakan pilih nama slug lain.");
-        }
-    }
-    
-    // Parse groom and bride from slug (e.g. arya-fajar -> Arya & Fajar)
     $parts = explode('-', $slug);
-    $parsedGroom = "Budi";
-    $parsedBride = "Siti";
-    if (count($parts) >= 2) {
-        $parsedGroom = ucfirst(trim($parts[0]));
-        $parsedBride = ucfirst(trim($parts[1]));
-    } else if (count($parts) === 1 && !empty($parts[0])) {
-        $parsedGroom = ucfirst(trim($parts[0]));
-    }
+    $parsedGroom = "Budi"; $parsedBride = "Siti";
+    if (count($parts) >= 2) { $parsedGroom = ucfirst(trim($parts[0])); $parsedBride = ucfirst(trim($parts[1])); }
+    elseif (count($parts) === 1) { $parsedGroom = ucfirst(trim($parts[0])); }
 
-    $newInvitation = [
-        "slug" => $slug,
-        "password" => $password,
-        "status" => "trial",
-        "trial_expires_at" => time() + 86400, // 24 Hours
-        "active" => true,
-        "visits" => 0,
-        "order_name" => $name,
-        "order_phone" => $phone,
-        "order_email" => $email,
-        "order_theme" => $theme,
-        "ref" => $ref,
-        "price" => $price,
-        
-        "brideName" => $parsedBride,
-        "groomName" => $parsedGroom,
-        "brideFullName" => $parsedBride,
-        "groomFullName" => $parsedGroom,
-        "brideParents" => "Putri tercinta dari Orang Tua Mempelai Wanita",
-        "groomParents" => "Putra tercinta dari Orang Tua Mempelai Pria",
-        "eventDateISO" => date('Y-m-d', strtotime('+30 days')),
-        "akadTime" => "08:00 WIB - selesai",
-        "resepsiTime" => "11:00 WIB - selesai",
-        "venueName" => "Gedung Serbaguna Harmoni",
-        "venueAddress" => "Jl. Harmoni Indah No. 12, Jakarta",
-        "mapsUrl" => "https://maps.google.com",
-        "musicUrl" => getThemeMusicUrl($theme),
-        "videoUrl" => "",
-        "bankName" => "BCA",
-        "bankNumber" => "1234567890",
-        "bankHolder" => "Budi Santoso",
-        "walletName" => "DANA",
-        "walletNumber" => $phone,
-        "showVideo" => false,
-        "showGallery" => true,
-        "enableRsvp" => true,
-        "gallery" => [
-            "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1583939003579-730e3918a45a?q=80&w=300&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=300&auto=format&fit=crop"
-        ],
-        "story" => [
-            ["title" => "Pertemuan Pertama", "date" => "2024", "description" => "Awal mula cerita kami dimulai dari sini."]
-        ]
-    ];
+    $gallery = json_encode(["https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=300&auto=format&fit=crop","https://images.unsplash.com/photo-1583939003579-730e3918a45a?q=80&w=300&auto=format&fit=crop","https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=300&auto=format&fit=crop"]);
+    $story = json_encode([["title" => "Pertemuan Pertama", "date" => "2024", "description" => "Awal mula cerita kami dimulai dari sini."]]);
+
+    $stmt = $db->prepare("INSERT OR REPLACE INTO invitations (slug, password, status, trial_expires_at, active, visits, order_name, order_phone, order_email, order_theme, ref, price, brideName, groomName, brideFullName, groomFullName, brideParents, groomParents, eventDateISO, akadTime, resepsiTime, venueName, venueAddress, mapsUrl, musicUrl, videoUrl, bankName, bankNumber, bankHolder, walletName, walletNumber, showVideo, showGallery, enableRsvp, gallery, story, updated_at) VALUES (:slug, :password, 'trial', :trial_expires_at, 1, 0, :order_name, :order_phone, :order_email, :order_theme, :ref, :price, :brideName, :groomName, :brideFullName, :groomFullName, :brideParents, :groomParents, :eventDateISO, :akadTime, :resepsiTime, :venueName, :venueAddress, :mapsUrl, :musicUrl, :videoUrl, :bankName, :bankNumber, :bankHolder, :walletName, :walletNumber, 0, 1, 1, :gallery, :story, datetime('now'))");
     
-    $jsonOutput = json_encode($newInvitation, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    if (file_put_contents($filePath, $jsonOutput) !== false) {
-        sendResponse([
-            "status" => "success",
-            "message" => "Pendaftaran trial berhasil.",
-            "slug" => $slug,
-            "data" => $newInvitation
-        ]);
-    } else {
-        sendError(500, "Gagal memproses pendaftaran trial di server.");
-    }
+    $stmt->execute([
+        ':slug' => $slug, ':password' => password_hash($password, PASSWORD_DEFAULT),
+        ':trial_expires_at' => time() + 86400,
+        ':order_name' => $name, ':order_phone' => $phone, ':order_email' => $email,
+        ':order_theme' => $theme, ':ref' => $ref, ':price' => $price,
+        ':brideName' => $parsedBride, ':groomName' => $parsedGroom,
+        ':brideFullName' => $parsedBride, ':groomFullName' => $parsedGroom,
+        ':brideParents' => "Putri tercinta dari Orang Tua Mempelai Wanita",
+        ':groomParents' => "Putra tercinta dari Orang Tua Mempelai Pria",
+        ':eventDateISO' => date('Y-m-d', strtotime('+30 days')),
+        ':akadTime' => "08:00 WIB - selesai", ':resepsiTime' => "11:00 WIB - selesai",
+        ':venueName' => "Gedung Serbaguna Harmoni", ':venueAddress' => "Jl. Harmoni Indah No. 12, Jakarta",
+        ':mapsUrl' => "https://maps.google.com", ':musicUrl' => getThemeMusicUrl($theme),
+        ':videoUrl' => "", ':bankName' => "BCA", ':bankNumber' => "1234567890",
+        ':bankHolder' => "Budi Santoso", ':walletName' => "DANA", ':walletNumber' => $phone,
+        ':gallery' => $gallery, ':story' => $story
+    ]);
+    
+    sendResponse(["status" => "success", "message" => "Pendaftaran trial berhasil.", "slug" => $slug]);
 }
 
-/**
- * Processes visit tracking by incrementing the 'visits' counter in slug JSON data.
- */
-function handleTrackVisit($dataDir) {
+function handleTrackVisit($db) {
     $slug = isset($_GET['slug']) ? sanitizeSlug($_GET['slug']) : '';
-    if (empty($slug)) {
-        sendError(400, "Missing slug query parameter.");
-    }
+    if (empty($slug)) { sendError(400, "Missing slug query parameter."); }
     
-    $filePath = $dataDir . "/" . $slug . ".json";
-    if (file_exists($filePath)) {
-        $json = file_get_contents($filePath);
-        $data = json_decode($json, true);
-        if (!isset($data['visits'])) {
-            $data['visits'] = 0;
-        }
-        $data['visits'] += 1;
-        file_put_contents($filePath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-        sendResponse(["status" => "success", "visits" => $data['visits']]);
-    } else {
-        sendError(404, "Invitation not found.");
-    }
+    $db->exec("UPDATE invitations SET visits = visits + 1 WHERE slug = " . $db->quote($slug));
+    $stmt = $db->prepare("SELECT visits FROM invitations WHERE slug = :slug");
+    $stmt->execute([':slug' => $slug]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($row) { sendResponse(["status" => "success", "visits" => $row['visits']]); }
+    else { sendError(404, "Invitation not found."); }
 }
 
-/**
- * Dynamic Reseller Login and Commission calculation
- */
-function handleResellerLogin($dataDir) {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        sendError(405, "Method Not Allowed. Use POST.");
-    }
+function handleResellerLogin($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { sendError(405, "Method Not Allowed. Use POST."); }
     $rawInput = file_get_contents("php://input");
     $data = json_decode($rawInput, true);
     $email = isset($data['email']) ? trim(strtolower($data['email'])) : '';
-    if (empty($email)) {
-        sendError(400, "Email wajib diisi.");
-    }
+    if (empty($email)) { sendError(400, "Email wajib diisi."); }
     
-    // Sanitise email for safe filename
-    $safeEmail = preg_replace('/[^a-z0-9@._-]/', '', $email);
-    $filePath = $dataDir . "/reseller_" . $safeEmail . ".json";
+    $stmt = $db->prepare("SELECT * FROM resellers WHERE email = :email");
+    $stmt->execute([':email' => $email]);
+    $reseller = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    if (!file_exists($filePath)) {
-        // Create new reseller profile
+    if (!$reseller) {
         $randId = "IND-" . rand(10000, 99999);
-        $newReseller = [
-            "email" => $email,
-            "affiliateId" => $randId,
-            "points" => 0,
-            "withdrawals" => 0
-        ];
-        file_put_contents($filePath, json_encode($newReseller, JSON_PRETTY_PRINT));
+        $ins = $db->prepare("INSERT INTO resellers (email, affiliate_id, points, withdrawals) VALUES (:email, :aid, 0, 0)");
+        $ins->execute([':email' => $email, ':aid' => $randId]);
+        $reseller = ['email' => $email, 'affiliate_id' => $randId, 'points' => 0, 'withdrawals' => 0];
     }
     
-    $reseller = json_decode(file_get_contents($filePath), true);
-    $affiliateId = $reseller['affiliateId'];
+    $affiliateId = $reseller['affiliate_id'];
     
-    // Scan all client files to gather dynamic referrals
+    $cstmt = $db->prepare("SELECT slug, brideName, groomName, status, price FROM invitations WHERE ref = :ref");
+    $cstmt->execute([':ref' => $affiliateId]);
     $clients = [];
     $totalCommission = 0;
     
-    $files = glob($dataDir . "/*.json");
-    foreach ($files as $file) {
-        $filename = basename($file);
-        if (strpos($filename, 'reseller_') === 0 || strpos($filename, '-wishes') !== false || strpos($filename, '-rsvp') !== false || strpos($filename, '_attendance') !== false || strpos($filename, '_comments') !== false) {
-            continue;
-        }
-        
-        $clientData = json_decode(file_get_contents($file), true);
-        if (isset($clientData['ref']) && $clientData['ref'] === $affiliateId) {
-            $slug = str_replace('.json', '', $filename);
-            $bride = isset($clientData['brideName']) ? $clientData['brideName'] : 'Siti';
-            $groom = isset($clientData['groomName']) ? $clientData['groomName'] : 'Budi';
-            $status = isset($clientData['status']) ? $clientData['status'] : 'pending_payment';
-            $price = isset($clientData['price']) ? intval($clientData['price']) : 35000;
-            
-            $isPaid = ($status === 'active' || (isset($clientData['active']) && $clientData['active'] === true));
-            $clientStatus = $isPaid ? 'Active' : 'Pending';
-            
-            $margin = $price - 35000;
-            if ($margin < 0) $margin = 0;
-            
-            if ($isPaid) {
-                $totalCommission += $margin;
-            }
-            
-            $clients[] = [
-                "slug" => $slug,
-                "couple" => $bride . " & " . $groom,
-                "package" => "All-in-One",
-                "price" => $price,
-                "status" => $clientStatus
-            ];
-        }
+    while ($c = $cstmt->fetch(PDO::FETCH_ASSOC)) {
+        $isPaid = ($c['status'] === 'active');
+        $margin = max(0, intval($c['price']) - 35000);
+        if ($isPaid) $totalCommission += $margin;
+        $clients[] = [
+            "slug" => $c['slug'],
+            "couple" => ($c['brideName'] ?? 'Siti') . " & " . ($c['groomName'] ?? 'Budi'),
+            "package" => "All-in-One",
+            "price" => intval($c['price']),
+            "status" => $isPaid ? 'Active' : 'Pending'
+        ];
     }
     
-    $netCommission = $totalCommission - (isset($reseller['withdrawals']) ? intval($reseller['withdrawals']) : 0);
-    if ($netCommission < 0) $netCommission = 0;
+    $netCommission = max(0, $totalCommission - intval($reseller['withdrawals']));
     
     sendResponse([
         "status" => "success",
@@ -847,119 +973,74 @@ function handleResellerLogin($dataDir) {
     ]);
 }
 
-/**
- * Creates a dynamic Saya Bayar payment invoice.
- */
-function handleCreateSayaBayarInvoice($dataDir) {
-    // Read input request
+function handleCreateSayaBayarInvoice($db) {
     $input = file_get_contents("php://input");
     $req = json_decode($input, true);
     
     $slug = isset($req['slug']) ? sanitizeSlug($req['slug']) : '';
-    if (empty($slug)) {
-        sendError(400, "Slug wajib diisi");
-    }
+    if (empty($slug)) { sendError(400, "Slug wajib diisi"); }
     
-    $filePath = $dataDir . "/" . $slug . ".json";
-    if (!file_exists($filePath)) {
-        sendError(404, "Data undangan tidak ditemukan");
-    }
+    $stmt = $db->prepare("SELECT price FROM invitations WHERE slug = :slug");
+    $stmt->execute([':slug' => $slug]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) { sendError(404, "Data undangan tidak ditemukan"); }
     
-    $fileData = json_decode(file_get_contents($filePath), true);
-    $price = isset($fileData['price']) ? intval($fileData['price']) : 35000;
+    $price = intval($row['price']);
     
-    $url = "https://api.sayabayar.com/v1/invoices";
-    $apiKey = "sk_live_c5f4880a1279a1287ab9531d2b661916ab05662d3a2e9ecc";
+    $apiKey = getenv('SAYABAYAR_API_KEY');
+    if (empty($apiKey)) { sendError(500, "Payment gateway configuration error."); }
     
-    $postData = [
-        "amount" => $price,
-        "reference" => $slug,
-        "description" => "Aktivasi Premium Undangan Intim - " . $slug,
-        "redirect_url" => "https://intim.my.id/app/index.html"
-    ];
-    
-    $ch = curl_init($url);
+    $ch = curl_init("https://api.sayabayar.com/v1/invoices");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Content-Type: application/json",
-        "x-api-key: " . $apiKey
-    ]);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json", "x-api-key: " . $apiKey]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        "amount" => $price, "reference" => $slug,
+        "description" => "Aktivasi Premium Undangan Intim - " . $slug,
+        "redirect_url" => "https://intim.my.id/app/index.html"
+    ]));
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     
-    if ($httpCode !== 201) {
-        sendError(500, "Gagal membuat invoice pembayaran. Error: " . $response);
-    }
+    if ($httpCode !== 201) { sendError(500, "Gagal membuat invoice pembayaran. Error: " . $response); }
     
     $resData = json_decode($response, true);
-    if (!isset($resData['success']) || !$resData['success']) {
-        sendError(500, "Respon error dari provider pembayaran.");
-    }
+    if (!isset($resData['success']) || !$resData['success']) { sendError(500, "Respon error dari provider pembayaran."); }
     
-    sendResponse([
-        "status" => "success",
-        "payment_url" => $resData['data']['payment_url'],
-        "amount" => $resData['data']['amount']
-    ]);
+    sendResponse(["status" => "success", "payment_url" => $resData['data']['payment_url'], "amount" => $resData['data']['amount']]);
 }
 
-/**
- * Handles payment callbacks sent from Saya Bayar webhook.
- */
-function handleSayaBayarCallback($dataDir) {
+function handleSayaBayarCallback($db) {
     $input = file_get_contents("php://input");
     
-    // Log for audit purposes
-    file_put_contents($dataDir . "/sayabayar_log.txt", "[" . date('Y-m-d H:i:s') . "] Webhook Received: " . $input . "\n", FILE_APPEND);
-    
     $payload = json_decode($input, true);
-    if (!$payload) {
-        sendError(400, "Invalid payload");
-    }
+    if (!$payload) { sendError(400, "Invalid payload"); }
     
     $invoiceId = $payload['data']['id'] ?? '';
     $slug = $payload['data']['reference'] ?? '';
-    $event = $payload['event'] ?? '';
     
-    if (empty($invoiceId) || empty($slug)) {
-        sendError(400, "Missing parameters");
-    }
+    if (empty($invoiceId) || empty($slug)) { sendError(400, "Missing parameters"); }
     
-    // Make a secure GET verification call to sayabayar API
-    $url = "https://api.sayabayar.com/v1/invoices/" . $invoiceId;
-    $apiKey = "sk_live_c5f4880a1279a1287ab9531d2b661916ab05662d3a2e9ecc";
+    $apiKey = getenv('SAYABAYAR_API_KEY');
+    if (empty($apiKey)) { sendError(500, "Payment gateway configuration error."); }
     
-    $ch = curl_init($url);
+    $ch = curl_init("https://api.sayabayar.com/v1/invoices/" . $invoiceId);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "x-api-key: " . $apiKey
-    ]);
-    
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ["x-api-key: " . $apiKey]);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     
-    if ($httpCode !== 200) {
-        sendError(500, "Gagal memverifikasi status pembayaran.");
-    }
+    if ($httpCode !== 200) { sendError(500, "Gagal memverifikasi status pembayaran."); }
     
     $resData = json_decode($response, true);
     $status = $resData['data']['status'] ?? '';
     
     if ($status === 'paid') {
-        $filePath = $dataDir . "/" . $slug . ".json";
-        if (file_exists($filePath)) {
-            $fileData = json_decode(file_get_contents($filePath), true);
-            $fileData['status'] = 'active';
-            $fileData['active'] = true;
-            file_put_contents($filePath, json_encode($fileData, JSON_PRETTY_PRINT));
-            
-            file_put_contents($dataDir . "/sayabayar_log.txt", "[" . date('Y-m-d H:i:s') . "] Activated slug: " . $slug . "\n", FILE_APPEND);
-        }
+        $upd = $db->prepare("UPDATE invitations SET status = 'active', active = 1, updated_at = datetime('now') WHERE slug = :slug");
+        $upd->execute([':slug' => $slug]);
     }
     
     sendResponse(["status" => "success"]);
