@@ -1,6 +1,6 @@
 # Project & VPS Memory
 - **Source VPS:** root@47.236.50.11 (Location: `/root`, `/var/www`, Passcode: `[REDACTED-ROTATE-PASSCODE]`)
-- **Target STB (CasaOS):** root@ssh.xxayii.my.id (via Cloudflare Tunnel)
+- **Target STB (CasaOS):** root@ssh.intim.my.id (via Cloudflare Tunnel)
 - **STB Passcode:** [REDACTED-ROTATE-PASSCODE]
 - **Local STB IP:** 192.168.1.81
 - **Project Backup:** Located at `/DATA/Downloads/gz/all_projects.tar.gz` on STB.
