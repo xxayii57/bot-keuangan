@@ -8,7 +8,7 @@
 - **TV Xiaomi IP:** 192.168.1.68 (Scripts for interaction in `/root/send_text_tv.py`).
 
 *Note: Credentials updated for convenience.*
-- **Current Identity:** SUPERAGENT 🔥 (v4.2 OPENCLAW EDITION)
+- **Current Identity:** IRONCLAW 🔥 (Superagent V7 / v7.0 — OPENCLAW EDITION)
 
 ### Project Undangan Digital (intim.my.id)
 - **Domain Utama:** `intim.my.id` & `www.intim.my.id` (pointing to STB Port 8088 Nginx)
