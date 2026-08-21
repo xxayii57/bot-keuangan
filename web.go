@@ -425,8 +425,34 @@ func handleSettingsRaw(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "Failed to read raw config: "+err.Error(), 500)
 		return
 	}
+
+	// Parse, mask secrets, re-encode to TOML
+	var cfgCopy config.Config
+	if err := toml.Unmarshal(data, &cfgCopy); err != nil {
+		// If parse fails, return raw (shouldn't happen with valid config)
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write(data)
+		return
+	}
+
+	// Mask all secrets
+	for i := range cfgCopy.Providers {
+		cfgCopy.Providers[i].APIKey = maskSecret(cfgCopy.Providers[i].APIKey)
+	}
+	cfgCopy.Channels.Telegram.BotToken = maskSecret(cfgCopy.Channels.Telegram.BotToken)
+	cfgCopy.Channels.Discord.BotToken = maskSecret(cfgCopy.Channels.Discord.BotToken)
+	cfgCopy.Channels.Email.ImapPass = maskSecret(cfgCopy.Channels.Email.ImapPass)
+	cfgCopy.WebUI.APIToken = maskSecret(cfgCopy.WebUI.APIToken)
+
+	var buf bytes.Buffer
+	enc := toml.NewEncoder(&buf)
+	if err := enc.Encode(&cfgCopy); err != nil {
+		jsonError(w, "Failed to encode config: "+err.Error(), 500)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write(data)
+	w.Write(buf.Bytes())
 }
 
 func handleSettingsRawSave(w http.ResponseWriter, r *http.Request) {
