@@ -1,13 +1,23 @@
 # Project & VPS Memory
-- **Source VPS:** root@47.236.50.11 (Location: `/root`, `/var/www`, Passcode: `[REDACTED-ROTATE-PASSCODE]`)
+
+> ⚠️ **SECURITY NOTICE (Phase 1A redaction — 2026-08-21)**
+> Kredensial asli telah DIHAPUS dari file ini karena sempat terekspos di
+> repository publik. Semua kredensial yang tercantum sebelumnya WAJIB dirotasi.
+> Simpan kredensial di password manager / file lokal yang tidak di-commit.
+
+## Infrastruktur
+
+- **Source VPS:** root@47.236.50.11 (Location: `/root`, `/var/www`)
+  - Passcode: `[REDACTED — ROTATE IMMEDIATELY]`
 - **Target STB (CasaOS):** root@ssh.intim.my.id (via Cloudflare Tunnel)
-- **STB Passcode:** [REDACTED-ROTATE-PASSCODE]
+  - STB Passcode: `[REDACTED — ROTATE IMMEDIATELY]`
 - **Local STB IP:** 192.168.1.81
 - **Project Backup:** Located at `/DATA/Downloads/gz/all_projects.tar.gz` on STB.
 - **STB Remote Access:** Configuration stored in `STB_ACCESS.md` (Cloudflare Tunnel + SSH).
 - **TV Xiaomi IP:** 192.168.1.68 (Scripts for interaction in `/root/send_text_tv.py`).
 
-*Note: Credentials updated for convenience.*
+*Note: Credentials updated for convenience.* ← PRAKTIK INI TIDAK AMAN, JANGAN ULANGI.
+
 - **Current Identity:** SUPERAGENT 🔥 (v4.2 OPENCLAW EDITION)
 
 ### Project Undangan Digital (intim.my.id)
@@ -20,8 +30,16 @@
 
 ### Automated Spy Bot Setup (STB)
 - **Target iPhone IP:** 192.168.1.78
-- **Telegram Bot:** [REDACTED-TOKEN-SPY-BOT]
+- **Telegram Bot:** `[REDACTED — REVOKE VIA @BotFather]` (token bot lama, sudah terekspos publik)
 - **Chat ID:** 580132327
 - **Script Location:** /root/spy_bot.py
 - **Log Location:** /DATA/spy_log.txt
 - **Status:** Active via systemd (spy-bot.service)
+
+## Credential Rotation Checklist (Phase 1A)
+
+| # | Credential | Lokasi lama | Status |
+|---|---|---|---|
+| R1 | Password root VPS 47.236.50.11 | MEMORY.md:2 | ⚠️ WAJIB ROTASI |
+| R2 | Passcode root STB ssh.intim.my.id | MEMORY.md:4 | ⚠️ WAJIB ROTASI |
+| R3 | Token bot Telegram "spy bot" (8774650894) | MEMORY.md:23 | ⚠️ WAJIB REVOKE via @BotFather |
