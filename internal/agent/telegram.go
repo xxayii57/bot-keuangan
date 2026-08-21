@@ -1,25 +1,28 @@
 package agent
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 )
 
 // TelegramBot handles the Telegram long-polling gateway.
 type TelegramBot struct {
-	token     string
-	agent     *Agent
-	offset    int
-	running   bool
+	token   string
+	agent   *Agent
+	offset  int
+	running bool
+	client  *http.Client
 }
 
 func NewTelegramBot(token string, agent *Agent) *TelegramBot {
 	return &TelegramBot{
-		token: token,
-		agent: agent,
+		token:  token,
+		agent:  agent,
+		client: &http.Client{Timeout: 60 * time.Second},
 	}
 }
 
@@ -48,15 +51,24 @@ func (b *TelegramBot) Stop() {
 	b.running = false
 }
 
+// Telegram API response and update types.
+
+type tgAPIResponse struct {
+	OK     bool            `json:"ok"`
+	Result json.RawMessage `json:"result,omitempty"`
+	Description string     `json:"description,omitempty"`
+	ErrorCode   int        `json:"error_code,omitempty"`
+}
+
 type tgUpdate struct {
-	UpdateID int `json:"update_id"`
-	Message  *tgMessage `json:"message"`
+	UpdateID int        `json:"update_id"`
+	Message  *tgMessage `json:"message,omitempty"`
 }
 
 type tgMessage struct {
-	MessageID int `json:"message_id"`
+	MessageID int    `json:"message_id"`
 	Chat      tgChat `json:"chat"`
-	Text      string `json:"text"`
+	Text      string `json:"text,omitempty"`
 }
 
 type tgChat struct {
@@ -65,24 +77,34 @@ type tgChat struct {
 
 func (b *TelegramBot) getUpdates() ([]tgUpdate, error) {
 	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates?offset=%d&timeout=30", b.token, b.offset)
-	resp, err := http.Get(apiURL)
+
+	resp, err := b.client.Get(apiURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Minimal JSON parse for update array
-	// In production, use encoding/json with proper structs
-	var buf = make([]byte, 65536)
-	n, _ := resp.Body.Read(buf)
-	body := string(buf[:n])
-
-	if !strings.Contains(body, `"ok":true`) || !strings.Contains(body, `"result"`) {
-		return nil, fmt.Errorf("unexpected response: %s", body[:min(len(body), 200)])
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Extract update_id of last update to advance offset
-	updates := parseUpdatesJSON(body)
+	var apiResp tgAPIResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON response: %w (body: %s)", err, truncate(string(body), 200))
+	}
+
+	if !apiResp.OK {
+		return nil, fmt.Errorf("API error %d: %s", apiResp.ErrorCode, apiResp.Description)
+	}
+
+	var updates []tgUpdate
+	if len(apiResp.Result) > 0 {
+		if err := json.Unmarshal(apiResp.Result, &updates); err != nil {
+			return nil, fmt.Errorf("failed to parse updates array: %w", err)
+		}
+	}
+
 	if len(updates) > 0 {
 		b.offset = updates[len(updates)-1].UpdateID + 1
 	}
@@ -118,34 +140,22 @@ func (b *TelegramBot) sendMessage(chatID int64, text string) {
 	data.Set("text", text)
 	data.Set("parse_mode", "Markdown")
 
-	http.PostForm(apiURL, data)
+	resp, err := b.client.PostForm(apiURL, data)
+	if err != nil {
+		fmt.Printf("[telegram] failed to send message to %d: %v\n", chatID, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("[telegram] sendMessage returned %d: %s\n", resp.StatusCode, truncate(string(body), 200))
+	}
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
 	}
-	return b
-}
-
-// parseUpdatesJSON is a minimal JSON parser for Telegram updates.
-// Extracts update_id values without importing encoding/json for simplicity.
-func parseUpdatesJSON(body string) []tgUpdate {
-	var updates []tgUpdate
-	// Find all "update_id": N patterns
-	for {
-		idx := strings.Index(body, `"update_id":`)
-		if idx == -1 {
-			break
-		}
-		body = body[idx+12:]
-		end := strings.IndexAny(body, ",}")
-		if end == -1 {
-			break
-		}
-		var uid int
-		fmt.Sscanf(strings.TrimSpace(body[:end]), "%d", &uid)
-		updates = append(updates, tgUpdate{UpdateID: uid})
-	}
-	return updates
+	return s[:max] + "..."
 }

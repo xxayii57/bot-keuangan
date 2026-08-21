@@ -643,16 +643,16 @@ func (a *Agent) toolMCPCall(args map[string]interface{}) (string, error) {
 	if server == "" || tool == "" {
 		return "", fmt.Errorf("server and tool are required")
 	}
-	a.mcp.mu.RLock()
-	srv, ok := a.mcp.servers[server]
-	a.mcp.mu.RUnlock()
+	srv, ok := a.mcp.GetServer(server)
 	if !ok {
 		return fmt.Sprintf("MCP server '%s' not connected.", server), nil
 	}
 	if srv.isClosed {
 		return fmt.Sprintf("MCP server '%s' is closed.", server), nil
 	}
-	return fmt.Sprintf("MCP call %s/%s: not yet implemented (stdio transport pending).", server, tool), nil
+	// Extract tool arguments if provided.
+	toolArgs, _ := args["arguments"].(map[string]interface{})
+	return srv.CallTool(tool, toolArgs)
 }
 
 func (a *Agent) toolMCPList(args map[string]interface{}) (string, error) {
@@ -663,6 +663,14 @@ func (a *Agent) toolMCPList(args map[string]interface{}) (string, error) {
 	var lines []string
 	for _, s := range servers {
 		lines = append(lines, fmt.Sprintf("%s [%s] tools=%d", s.Name, s.Status, s.Tools))
+	}
+	// Also list the dynamically registered MCP tools.
+	allTools := a.mcp.AllTools()
+	if len(allTools) > 0 {
+		lines = append(lines, "\nDiscovered MCP tools:")
+		for _, t := range allTools {
+			lines = append(lines, fmt.Sprintf("  mcp_%s_%s — %s", t.ServerName, t.Name, t.Description))
+		}
 	}
 	return strings.Join(lines, "\n"), nil
 }

@@ -90,6 +90,9 @@ func New(cfg *config.Config) *Agent {
 			fmt.Printf("[intimclaw] Connecting to MCP server: %s (%s %v)...\n", s.Name, s.Command, s.Args)
 			a.mcp.Connect(s.Name, s.Command, s.Args)
 		}
+		// Register discovered MCP tools into the ToolRegistry.
+		// Each tool goes through security checks like any other tool.
+		a.registerMCPTools()
 	}
 	return a
 }
@@ -133,6 +136,29 @@ func (a *Agent) registerBuiltinTools() {
 	// Skills tools
 	a.tools.Register("skill_list", "List available skills", a.toolSkillList)
 	a.tools.Register("skill_load", "Load skill content", a.toolSkillLoad)
+}
+
+// registerMCPTools registers all tools discovered from connected MCP servers
+// into the ToolRegistry. Each MCP tool is wrapped so it goes through the
+// security guard before being forwarded to the MCP server via stdio.
+func (a *Agent) registerMCPTools() {
+	allTools := a.mcp.AllTools()
+	for _, t := range allTools {
+		// Capture loop variable for closure.
+		mcpTool := t
+		toolName := "mcp_" + mcpTool.ServerName + "_" + mcpTool.Name
+		desc := fmt.Sprintf("[MCP:%s] %s", mcpTool.ServerName, mcpTool.Description)
+		a.tools.Register(toolName, desc, func(args map[string]interface{}) (string, error) {
+			srv, ok := a.mcp.GetServer(mcpTool.ServerName)
+			if !ok {
+				return "", fmt.Errorf("MCP server '%s' not connected", mcpTool.ServerName)
+			}
+			return srv.CallTool(mcpTool.Name, args)
+		})
+	}
+	if len(allTools) > 0 {
+		fmt.Printf("[intimclaw] registered %d MCP tools\n", len(allTools))
+	}
 }
 
 func (a *Agent) SetModel(model string) {
@@ -1065,21 +1091,18 @@ type MCPServerStatus struct {
 
 func (a *Agent) GetMCPServers() []MCPServerStatus {
 	var result []MCPServerStatus
-	
-	activeServers := make(map[string]*MCPServer)
+
 	a.mcp.mu.RLock()
-	for name, srv := range a.mcp.servers {
-		activeServers[name] = srv
-	}
-	a.mcp.mu.RUnlock()
+	defer a.mcp.mu.RUnlock()
 
 	for _, s := range a.cfg.MCP.Servers {
 		status := "disconnected"
 		toolsCount := 0
-		if srv, exists := activeServers[s.Name]; exists {
-			status = "connected"
+		if srv, exists := a.mcp.servers[s.Name]; exists {
 			if srv.isClosed {
 				status = "disconnected"
+			} else {
+				status = "connected"
 			}
 			toolsCount = len(srv.Tools)
 		}
