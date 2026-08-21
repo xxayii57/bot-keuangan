@@ -1,7 +1,7 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 
 # =================================================================
-# INTIMCLAW CLI AUTO-INSTALLER FOR ANDROID/TERMUX
+# INTIMCLAW UNIVERSAL BOOTSTRAP INSTALLER
 # =================================================================
 set -e
 
@@ -13,100 +13,316 @@ YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${GREEN}       MEMULAI INSTALASI AUTOMATIS INTIMCLAW CLI     ${NC}"
+echo -e "${GREEN}       MEMULAI INSTALASI UNIVERSAL INTIMCLAW CLI     ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
-# 1. Update paket & Install dependencies dasar
-echo -e "${YELLOW}[1/4] Menginstal dependensi Termux (curl, git, nodejs)...${NC}"
-pkg update -y
-pkg install -y curl git nodejs
+# --- DETEKSI OS & ARSITEKTUR ---
+OS_NAME="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH_NAME="$(uname -m)"
 
-# 2. Membuat direktori konfigurasi & workspace lokal di HP user baru
-echo -e "${YELLOW}[2/4] Membuat direktori workspace ~/.intimclaw...${NC}"
-mkdir -p ~/.intimclaw
-mkdir -p ~/.intimclaw/skills
-mkdir -p ~/.intimclaw/superintim
-mkdir -p ~/.intimclaw/sessions
+# Normalisasi Nama Arsitektur
+case "$ARCH_NAME" in
+    x86_64|amd64)
+        ARCH="amd64"
+        ;;
+    aarch64|arm64)
+        ARCH="arm64"
+        ;;
+    *)
+        echo -e "${RED}[Error] Arsitektur CPU '$ARCH_NAME' tidak didukung.${NC}"
+        exit 1
+        ;;
+esac
 
-# 3. Mengunduh binary intimclaw untuk Android (ARM64)
-echo -e "${YELLOW}[3/4] Mengunduh binary intimclaw ARM64...${NC}"
-# Kita download langsung biner compiled dari server intimpos STB lo
-curl -L -o $PREFIX/bin/intimclaw "http://intimpos.xxayii.my.id/downloads/intimclaw"
-chmod +x $PREFIX/bin/intimclaw
+# Deteksi Termux / Android
+IS_TERMUX=false
+if [ -n "$PREFIX" ] && [[ "$PREFIX" == *"com.termux"* ]]; then
+    IS_TERMUX=true
+fi
 
-# 4. Mengunduh berkas aset pendukung (Prompt & config template)
-echo -e "${YELLOW}[4/4] Mendownload template konfigurasi & kepribadian AI...${NC}"
-# Jika gagal konek ke web server, kita buat template dasar secara otomatis
-cat << 'EOF' > ~/.intimclaw/config.toml
-# config.toml — IntimClaw Default Configuration
-[agent]
-name = "intimclaw"
-version = "0.1.0"
-model_provider = ""
-model = ""
-persona = "superintim"
+# Deteksi Windows WSL
+IS_WSL=false
+if grep -qE "(Microsoft|WSL)" /proc/version 2>/dev/null; then
+    IS_WSL=true
+fi
 
-[providers.gemini]
-type = "openai-compatible"
-base_url = "https://generativelanguage.googleapis.com/v1beta"
-api_key = ""
-models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash"]
+# Menentukan Target Biner
+BINARY_NAME=""
+INSTALL_DIR=""
 
-[providers.anthropic]
-type = "anthropic"
-base_url = "https://api.anthropic.com/v1"
-api_key = ""
-models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"]
+if [ "$IS_TERMUX" = true ]; then
+    echo -e "${YELLOW}Deteksi Platform: Android ARM64 (Termux)${NC}"
+    BINARY_NAME="intimclaw-android-arm64"
+    INSTALL_DIR="$PREFIX/bin"
+else
+    case "$OS_NAME" in
+        linux)
+            if [ "$IS_WSL" = true ]; then
+                echo -e "${YELLOW}Deteksi Platform: Windows WSL ($ARCH)${NC}"
+            else
+                echo -e "${YELLOW}Deteksi Platform: Linux ($ARCH)${NC}"
+            fi
+            BINARY_NAME="intimclaw-linux-$ARCH"
+            INSTALL_DIR="$HOME/.local/bin"
+            ;;
+        darwin)
+            echo -e "${YELLOW}Deteksi Platform: macOS ($ARCH)${NC}"
+            BINARY_NAME="intimclaw-darwin-$ARCH"
+            INSTALL_DIR="$HOME/.local/bin"
+            ;;
+        *)
+            echo -e "${RED}[Error] Sistem Operasi '$OS_NAME' tidak didukung oleh installer Linux/Unix.${NC}"
+            echo -e "${YELLOW}Untuk Windows, silakan jalankan installer PowerShell (install.ps1).${NC}"
+            exit 1
+            ;;
+    esac
+fi
 
-[providers.openai]
-type = "openai-compatible"
-base_url = "https://api.openai.com/v1"
-api_key = ""
-models = ["gpt-4o", "gpt-4o-mini"]
+# Buat direktori instalasi jika belum ada
+mkdir -p "$INSTALL_DIR"
 
-[providers.groq]
-type = "openai-compatible"
-base_url = "https://api.groq.com/openai/v1"
-api_key = ""
-models = ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
+# --- UNDUH & VERIFIKASI CHECKSUM ---
+REPO_RAW_URL="https://raw.githubusercontent.com/xxayii57/bot-keuangan/main"
+DOWNLOAD_URL="$REPO_RAW_URL/releases/$BINARY_NAME"
+CHECKSUM_URL="$REPO_RAW_URL/docs/release/sha256.txt"
+TEMP_FILE="$(mktemp)"
 
-[skills]
-enabled = true
-directories = ["/data/data/com.termux/files/home/.intimclaw/skills"]
+echo -e "${YELLOW}Mengunduh berkas checksum...${NC}"
+CHECKSUMS_DATA=$(curl -fsSL "$CHECKSUM_URL")
+TARGET_CHECKSUM=$(echo "$CHECKSUMS_DATA" | grep "$BINARY_NAME" | awk '{print $1}')
 
-[memory]
-backend = "sqlite"
-semantic_search = true
+if [ -z "$TARGET_CHECKSUM" ]; then
+    echo -e "${RED}[Error] Checksum untuk biner '$BINARY_NAME' tidak ditemukan di database rilis.${NC}"
+    rm -f "$TEMP_FILE"
+    exit 1
+fi
 
-[security]
-risk_profile = "default"
-sandbox = false
-excluded_tools = ["rm", "mkfs", "dd", "shutdown"]
-forbidden_paths = [".ssh", ".gnupg"]
+echo -e "${YELLOW}Mengunduh biner $BINARY_NAME dari sumber aman...${NC}"
+# Note: Fallback download ke file lokal Termux jika url utama github releases belum diupload secara riil
+if ! curl -fsSL -o "$TEMP_FILE" "$DOWNLOAD_URL"; then
+    echo -e "${YELLOW}Mencoba fallback lokal dari repo assets...${NC}"
+    curl -fsSL -o "$TEMP_FILE" "$REPO_RAW_URL/intimclaw-android-project/app/src/main/assets/intimclaw-android"
+fi
+
+# Verifikasi Checksum SHA256
+echo -e "${YELLOW}Memverifikasi integritas berkas (SHA256 Checksum)...${NC}"
+VERIFIED=false
+
+if command -v sha256sum >/dev/null 2>&1; then
+    if echo "$TARGET_CHECKSUM  $TEMP_FILE" | sha256sum -c - >/dev/null 2>&1; then
+        VERIFIED=true
+    fi
+elif command -v shasum >/dev/null 2>&1; then
+    if echo "$TARGET_CHECKSUM  $TEMP_FILE" | shasum -a 256 -c - >/dev/null 2>&1; then
+        VERIFIED=true
+    fi
+else
+    # Fallback to python3 hash verification
+    if python3 -c "import hashlib, sys; f=open('$TEMP_FILE','rb').read(); h=hashlib.sha256(f).hexdigest(); sys.exit(0 if h == '$TARGET_CHECKSUM' else 1)" >/dev/null 2>&1; then
+        VERIFIED=true
+    fi
+fi
+
+if [ "$VERIFIED" = false ]; then
+    echo -e "${RED}[Error] Checksum SHA256 tidak cocok! Pembajakan berkas atau unduhan rusak dideteksi.${NC}"
+    echo -e "${RED}Instalasi dibatalkan demi keamanan.${NC}"
+    rm -f "$TEMP_FILE"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Verifikasi checksum berhasil. Berkas biner aman!${NC}"
+
+# --- INSTAL BINER ---
+FINAL_BINARY_PATH="$INSTALL_DIR/intimclaw-bin"
+mv "$TEMP_FILE" "$FINAL_BINARY_PATH"
+chmod +x "$FINAL_BINARY_PATH"
+
+# --- SETUP DIREKTORI DATA & CONFIG ---
+CONFIG_DIR=""
+WIZARD_DEST=""
+
+if [ "$IS_TERMUX" = true ]; then
+    CONFIG_DIR="$HOME/.intimclaw"
+    WIZARD_DEST="$HOME/intimclaw_wizard.py"
+else
+    CONFIG_DIR="$HOME/.config/intimclaw"
+    mkdir -p "$HOME/.local/share/intimclaw/skills"
+    mkdir -p "$HOME/.local/share/intimclaw/superintim"
+    mkdir -p "$HOME/.local/share/intimclaw/sessions"
+    WIZARD_DEST="$CONFIG_DIR/intimclaw_wizard.py"
+fi
+
+mkdir -p "$CONFIG_DIR"
+
+# Download Python Wizard File
+curl -fsSL -o "$WIZARD_DEST" "$REPO_RAW_URL/intimclaw_wizard.py"
+chmod +x "$WIZARD_DEST"
+
+# Buat wrapper bash/script di path utama
+echo -e "${YELLOW}Mengonfigurasi tautan eksekusi...${NC}"
+cat << 'EOF' > "$INSTALL_DIR/intimclaw"
+#!/usr/bin/env bash
+
+# Paths Configuration
+IS_TERMUX=false
+if [ -n "$PREFIX" ] && [[ "$PREFIX" == *"com.termux"* ]]; then
+    IS_TERMUX=true
+fi
+
+if [ "$IS_TERMUX" = true ]; then
+    INSTALL_DIR="$PREFIX/bin"
+    CONFIG_DIR="$HOME/.intimclaw"
+    WIZARD_DEST="$HOME/intimclaw_wizard.py"
+    FINAL_BINARY_PATH="$INSTALL_DIR/intimclaw-bin"
+else
+    INSTALL_DIR="$HOME/.local/bin"
+    CONFIG_DIR="$HOME/.config/intimclaw"
+    WIZARD_DEST="$CONFIG_DIR/intimclaw_wizard.py"
+    FINAL_BINARY_PATH="$INSTALL_DIR/intimclaw-bin"
+fi
+
+REPO_RAW_URL="https://raw.githubusercontent.com/xxayii57/bot-keuangan/main"
+
+# Handle CLI Update Command
+if [ "$1" = "update" ]; then
+    echo "====================================================="
+    echo "            MEMULAI PEMBARUAN INTIMCLAW              "
+    echo "====================================================="
+    
+    # Deteksi OS & Arch
+    OS_NAME="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    ARCH_NAME="$(uname -m)"
+    
+    case "$ARCH_NAME" in
+        x86_64|amd64) ARCH="amd64" ;;
+        aarch64|arm64) ARCH="arm64" ;;
+        *) echo "Arsitektur CPU tidak didukung."; exit 1 ;;
+    esac
+    
+    if [ "$IS_TERMUX" = true ]; then
+        BINARY_NAME="intimclaw-android-arm64"
+    else
+        BINARY_NAME="intimclaw-linux-$ARCH"
+        [ "$OS_NAME" = "darwin" ] && BINARY_NAME="intimclaw-darwin-$ARCH"
+    fi
+    
+    DOWNLOAD_URL="$REPO_RAW_URL/releases/$BINARY_NAME"
+    CHECKSUM_URL="$REPO_RAW_URL/docs/release/sha256.txt"
+    TEMP_FILE="$(mktemp)"
+    
+    echo "Mengecek rilis terbaru & checksum..."
+    CHECKSUMS_DATA=$(curl -fsSL "$CHECKSUM_URL")
+    TARGET_CHECKSUM=$(echo "$CHECKSUMS_DATA" | grep "$BINARY_NAME" | awk '{print $1}')
+    
+    if [ -z "$TARGET_CHECKSUM" ]; then
+        echo "[Error] Checksum untuk $BINARY_NAME tidak ditemukan."
+        rm -f "$TEMP_FILE"
+        exit 1
+    fi
+    
+    echo "Mengunduh biner pembaruan..."
+    if ! curl -fsSL -o "$TEMP_FILE" "$DOWNLOAD_URL"; then
+        echo "Mencoba fallback lokal dari repo assets..."
+        curl -fsSL -o "$TEMP_FILE" "$REPO_RAW_URL/intimclaw-android-project/app/src/main/assets/intimclaw-android"
+    fi
+    
+    # Verifikasi Checksum
+    VERIFIED=false
+    if command -v sha256sum >/dev/null 2>&1; then
+        echo "$TARGET_CHECKSUM  $TEMP_FILE" | sha256sum -c - >/dev/null 2>&1 && VERIFIED=true
+    elif command -v shasum >/dev/null 2>&1; then
+        echo "$TARGET_CHECKSUM  $TEMP_FILE" | shasum -a 256 -c - >/dev/null 2>&1 && VERIFIED=true
+    else
+        python3 -c "import hashlib, sys; f=open('$TEMP_FILE','rb').read(); h=hashlib.sha256(f).hexdigest(); sys.exit(0 if h == '$TARGET_CHECKSUM' else 1)" >/dev/null 2>&1 && VERIFIED=true
+    fi
+    
+    if [ "$VERIFIED" = false ]; then
+        echo "[Error] Verifikasi SHA256 gagal! Berkas pembaruan dibatalkan."
+        rm -f "$TEMP_FILE"
+        exit 1
+    fi
+    
+    # Ganti biner lama dengan aman
+    mv "$TEMP_FILE" "$FINAL_BINARY_PATH"
+    chmod +x "$FINAL_BINARY_PATH"
+    
+    # Update Python Wizard
+    curl -fsSL -o "$WIZARD_DEST" "$REPO_RAW_URL/intimclaw_wizard.py"
+    chmod +x "$WIZARD_DEST"
+    
+    echo "====================================================="
+    echo "✓ INTIMCLAW BERHASIL DIPERBARUI KE VERSI TERBARU!"
+    echo "====================================================="
+    exit 0
+fi
+
+# Handle CLI Uninstall Command
+if [ "$1" = "uninstall" ]; then
+    echo "====================================================="
+    echo "            UNINSTALL INTIMCLAW CLI                  "
+    echo "====================================================="
+    
+    PURGE=false
+    if [ "$2" = "--purge" ]; then
+        PURGE=true
+    fi
+    
+    echo "Menghapus biner aplikasi..."
+    rm -f "$FINAL_BINARY_PATH"
+    rm -f "$INSTALL_DIR/intimclaw"
+    
+    if [ "$PURGE" = true ]; then
+        echo "Melakukan pembersihan total (--purge)..."
+        rm -rf "$CONFIG_DIR"
+        [ "$IS_TERMUX" = false ] && rm -rf "$HOME/.local/share/intimclaw"
+        [ "$IS_TERMUX" = false ] && rm -rf "$HOME/.cache/intimclaw"
+        echo "✓ Semua data personal, memori, skills, dan konfigurasi telah dihapus."
+    else
+        echo "✓ Biner aplikasi berhasil dihapus."
+        echo "ℹ️ Data personal Anda (konfigurasi, memori, skills) di $CONFIG_DIR tetap dipertahankan."
+        echo "ℹ️ Untuk menghapus data personal secara permanen, jalankan kembali dengan opsi: --purge"
+    fi
+    echo "====================================================="
+    exit 0
+fi
+
+# Check and run Setup Wizard if unconfigured
+python3 "$WIZARD_DEST"
+
+# Execute the real Go binary passing all arguments
+exec "$FINAL_BINARY_PATH" "$@"
 EOF
+chmod +x "$INSTALL_DIR/intimclaw"
 
-# Membuat template SOUL.md kepribadian coding agent
-cat << 'EOF' > ~/.intimclaw/superintim/SOUL.md
-# SOUL OF INTIMCLAW AGENTIC CODER
+# --- SINKRONISASI PATH IDEMPOTENT ---
+if [ "$IS_TERMUX" = false ]; then
+    SHELL_CONFIGS=("$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/fish/config.fish")
+    PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+    FISH_PATH_LINE='set -gx PATH $HOME/.local/bin $PATH'
 
-Anda adalah **IntimClaw**, AI Agent coding mandiri yang tangguh, dikembangkan oleh xxayii (intim.my.id).
-
-## Gaya Berkomunikasi & Nada:
-- Gunakan bahasa Indonesia santai (casual lo/gue).
-- Nada bicara santai, cerdas, efisien, dan berorientasi pada eksekusi.
-- Berbicaralah seperti software engineer profesional yang asyik.
-
-## Aturan Utama Eksekusi Coding:
-1. Anda bukan asisten teks biasa. Anda adalah Agent Mandiri yang bisa memodifikasi kode.
-2. Gunakan `list_dir` dan `file_read` untuk memahami codebase proyek sebelum melakukan perubahan.
-3. Selalu gunakan `file_write` atau `file_edit` untuk membuat perubahan kode secara langsung dan rapi.
-4. Setelah melakukan edit file, jalankan perintah pengujian menggunakan tool `exec` (misal `npm run build`, `python3 script.py`) untuk memverifikasi bahwa perubahan bekerja sempurna dan tidak menimbulkan error baru.
-5. Jika ada error, analisis log-nya, perbaiki langsung, dan jangan menyerah sebelum target tercapai.
-EOF
+    for config in "${SHELL_CONFIGS[@]}"; do
+        if [ -f "$config" ]; then
+            # Cek idempotent untuk bash/zsh
+            if [[ "$config" == *".fish" ]]; then
+                if ! grep -q 'set -gx PATH $HOME/.local/bin' "$config"; then
+                    echo "" >> "$config"
+                    echo "$FISH_PATH_LINE" >> "$config"
+                    echo -e "${GREEN}✓ Menambahkan PATH ke $config${NC}"
+                fi
+            else
+                if ! grep -q 'export PATH="$HOME/.local/bin' "$config"; then
+                    echo "" >> "$config"
+                    echo "$PATH_LINE" >> "$config"
+                    echo -e "${GREEN}✓ Menambahkan PATH ke $config${NC}"
+                fi
+            fi
+        fi
+    done
+fi
 
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "${GREEN}       INTIMCLAW CLI BERHASIL DIINSTAL COK!          ${NC}"
 echo -e "${GREEN}=====================================================${NC}"
+echo -e "Silakan ketik ${BLUE}source ~/.bashrc${NC} (atau zshrc jika zsh) untuk mereload PATH."
 echo -e "Ketik ${BLUE}intimclaw${NC} di terminal lo untuk memulai setup wizard!"
-echo -e "Hubungi xxayii di ${YELLOW}intim.my.id${NC} jika butuh bantuan."
 echo -e "${BLUE}=====================================================${NC}"

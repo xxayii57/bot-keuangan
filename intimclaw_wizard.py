@@ -2,9 +2,42 @@
 import os
 import sys
 
+def get_paths():
+    home = os.environ.get("HOME", os.path.expanduser("~"))
+    is_termux = "PREFIX" in os.environ and "com.termux" in os.environ["PREFIX"]
+    
+    if is_termux or os.path.exists("/data/data/com.termux/files/usr/"):
+        base_dir = os.path.join(home, ".intimclaw")
+        return {
+            "is_termux": True,
+            "config_dir": base_dir,
+            "config_path": os.path.join(base_dir, "config.toml"),
+            "skills_dir": os.path.join(base_dir, "skills"),
+            "soul_dir": os.path.join(base_dir, "superintim"),
+            "sessions_dir": os.path.join(base_dir, "sessions"),
+            "memory_dir": base_dir
+        }
+    else:
+        # Standard XDG Directory specification for Linux/macOS
+        config_dir = os.environ.get("XDG_CONFIG_HOME", os.path.join(home, ".config"))
+        data_dir = os.environ.get("XDG_DATA_HOME", os.path.join(home, ".local", "share"))
+        
+        intimclaw_config = os.path.join(config_dir, "intimclaw")
+        intimclaw_data = os.path.join(data_dir, "intimclaw")
+        
+        return {
+            "is_termux": False,
+            "config_dir": intimclaw_config,
+            "config_path": os.path.join(intimclaw_config, "config.toml"),
+            "skills_dir": os.path.join(intimclaw_data, "skills"),
+            "soul_dir": os.path.join(intimclaw_data, "superintim"),
+            "sessions_dir": os.path.join(intimclaw_data, "sessions"),
+            "memory_dir": intimclaw_data
+        }
+
 def check_config():
-    home = os.environ.get("HOME", "/data/data/com.termux/files/home")
-    config_path = os.path.join(home, ".intimclaw", "config.toml")
+    paths = get_paths()
+    config_path = paths["config_path"]
     
     if not os.path.exists(config_path):
         return False
@@ -60,7 +93,6 @@ def run_wizard():
     print("-------------------------------------------------------")
     
     print("\nPilih AI Provider Utama Anda:")
-	
     print("1) Google Gemini (Sangat disarankan - Gratis & Cepat)")
     print("2) Anthropic Claude (Sangat Pintar - Butuh API Key)")
     print("3) OpenAI GPT (Standar Industri)")
@@ -100,14 +132,14 @@ def run_wizard():
         print("\n[Error] API Key tidak boleh kosong! Setup dibatalkan.")
         sys.exit(1)
         
-    home = os.environ.get("HOME", "/data/data/com.termux/files/home")
-    config_dir = os.path.join(home, ".intimclaw")
-    os.makedirs(config_dir, exist_ok=True)
-    os.makedirs(os.path.join(config_dir, "skills"), exist_ok=True)
-    os.makedirs(os.path.join(config_dir, "superintim"), exist_ok=True)
-    os.makedirs(os.path.join(config_dir, "sessions"), exist_ok=True)
+    paths = get_paths()
     
-    config_path = os.path.join(config_dir, "config.toml")
+    os.makedirs(paths["config_dir"], exist_ok=True)
+    os.makedirs(paths["skills_dir"], exist_ok=True)
+    os.makedirs(paths["soul_dir"], exist_ok=True)
+    os.makedirs(paths["sessions_dir"], exist_ok=True)
+    
+    config_path = paths["config_path"]
     
     # Generate config.toml
     provider_type = "anthropic" if choice == "2" else "openai-compatible"
@@ -126,7 +158,7 @@ api_key = "{api_key}"
 models = ["{default_model}"]
 """
     
-    # Customize if other standard providers should be written for completeness
+    # Add other providers for user manual setup references
     if provider != "gemini":
         config_content += """
 [providers.gemini]
@@ -164,7 +196,7 @@ models = ["llama-3.3-70b-versatile"]
     config_content += f"""
 [skills]
 enabled = true
-directories = ["{os.path.join(config_dir, "skills")}"]
+directories = ["{paths["skills_dir"]}"]
 
 [memory]
 backend = "sqlite"
@@ -181,7 +213,7 @@ forbidden_paths = [".ssh", ".gnupg"]
         f.write(config_content)
         
     # Generate superintim/SOUL.md
-    soul_path = os.path.join(config_dir, "superintim", "SOUL.md")
+    soul_path = os.path.join(paths["soul_dir"], "SOUL.md")
     if not os.path.exists(soul_path):
         soul_content = """# SOUL OF INTIMCLAW AGENTIC CODER
 
@@ -213,5 +245,5 @@ if __name__ == "__main__":
     if not check_config():
         run_wizard()
     else:
-        # Config exists and valid, do nothing
+        # Config exists and valid
         pass
