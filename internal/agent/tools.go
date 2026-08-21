@@ -5,8 +5,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/xxayii/intimclaw/internal/config"
 )
 
 // ToolInfo describes a registered tool.
@@ -18,17 +21,256 @@ type ToolInfo struct {
 // toolFunc is the signature every tool implements.
 type toolFunc func(args map[string]interface{}) (string, error)
 
-// ToolRegistry is a name→handler map with thread-safe access.
-type ToolRegistry struct {
-	mu    sync.RWMutex
-	tools map[string]toolFunc
-	meta  map[string]string // name → description
+// SecurityGuard enforces excluded_tools, forbidden_paths, and sandbox policy.
+type SecurityGuard struct {
+	cfg *config.Config
 }
 
-func NewToolRegistry() *ToolRegistry {
+func NewSecurityGuard(cfg *config.Config) *SecurityGuard {
+	return &SecurityGuard{cfg: cfg}
+}
+
+// IsPathForbidden checks if a resolved path matches any forbidden path prefix.
+func (g *SecurityGuard) IsPathForbidden(path string) (bool, string) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		abs = path
+	}
+	abs = filepath.Clean(abs)
+	home, _ := os.UserHomeDir()
+
+	for _, forbidden := range g.cfg.Security.ForbiddenPaths {
+		// Check against home-relative patterns
+		forbiddenExpanded := forbidden
+		if !filepath.IsAbs(forbidden) {
+			forbiddenExpanded = filepath.Join(home, forbidden)
+		}
+		absForbidden := filepath.Clean(forbiddenExpanded)
+
+		// Exact match
+		if abs == absForbidden {
+			return true, forbidden
+		}
+		// Path is inside the forbidden directory
+		if strings.HasPrefix(abs, absForbidden+string(filepath.Separator)) {
+			return true, forbidden
+		}
+		// Check if any path component matches the forbidden name
+		// e.g. /home/user/.ssh/id_rsa → components include ".ssh"
+		parts := strings.Split(abs, string(filepath.Separator))
+		for _, part := range parts {
+			if part == forbidden {
+				return true, forbidden
+			}
+		}
+	}
+	return false, ""
+}
+
+// IsCommandBlocked checks if a command string contains excluded tools.
+// Uses token-based matching instead of substring to avoid false positives.
+func (g *SecurityGuard) IsCommandBlocked(cmd string) (bool, string) {
+	tokens := tokenizeCommand(cmd)
+	excluded := g.cfg.Security.ExcludedTools
+
+	for _, ex := range excluded {
+		for _, token := range tokens {
+			// Match exact command name (last component of path)
+			base := filepath.Base(token)
+			if base == ex {
+				return true, ex
+			}
+			// Match full token
+			if token == ex {
+				return true, ex
+			}
+			// Match tool with suffix (e.g. mkfs.ext4 matches mkfs)
+			if strings.HasPrefix(base, ex+".") || strings.HasPrefix(base, ex+"-") {
+				return true, ex
+			}
+		}
+	}
+	return false, ""
+}
+
+// tokenizeCommand splits a shell command into tokens, respecting quotes.
+func tokenizeCommand(cmd string) []string {
+	var tokens []string
+	var current strings.Builder
+	inSingle := false
+	inDouble := false
+	escaped := false
+
+	for _, ch := range cmd {
+		if escaped {
+			current.WriteRune(ch)
+			escaped = false
+			continue
+		}
+		if ch == '\\' {
+			escaped = true
+			continue
+		}
+		if ch == '\'' && !inDouble {
+			inSingle = !inSingle
+			continue
+		}
+		if ch == '"' && !inSingle {
+			inDouble = !inDouble
+			continue
+		}
+		if (ch == ' ' || ch == '\t') && !inSingle && !inDouble {
+			if current.Len() > 0 {
+				tokens = append(tokens, current.String())
+				current.Reset()
+			}
+			continue
+		}
+		current.WriteRune(ch)
+	}
+	if current.Len() > 0 {
+		tokens = append(tokens, current.String())
+	}
+	return tokens
+}
+
+// wordBoundaryMatch checks if excluded tool matches as a whole word in the command.
+var wordBoundaryRegexCache = make(map[string]*regexp.Regexp)
+
+func wordBoundaryMatch(cmd, tool string) bool {
+	pattern, ok := wordBoundaryRegexCache[tool]
+	if !ok {
+		// Match tool name as a whole word: preceded by start/whitespace/;/|/& and followed by end/whitespace/;/|/&/( '
+		pattern = regexp.MustCompile(`(?:^|[;\s|&/` + "`" + `])` + regexp.QuoteMeta(tool) + `(?:$|[;\s|&/'"(])`)
+		wordBoundaryRegexCache[tool] = pattern
+	}
+	return pattern.MatchString(cmd)
+}
+
+// CheckToolSecurity validates a tool call against the security policy.
+// Returns an error if the call should be blocked.
+func (g *SecurityGuard) CheckToolSecurity(toolName string, args map[string]interface{}) error {
+	if g.cfg == nil {
+		return nil
+	}
+
+	// 1. Check sandbox mode — block exec and dangerous tools entirely
+	if g.cfg.Security.Sandbox {
+		dangerousInSandbox := map[string]bool{
+			"exec": true, "ssh_command": true, "process": true,
+			"docker": true, "telegram_api": true, "send_file": true,
+			"mcp_connect": true,
+		}
+		if dangerousInSandbox[toolName] {
+			return fmt.Errorf("tool '%s' blocked: sandbox mode is enabled", toolName)
+		}
+	}
+
+	// 2. Check exec tool — validate command tokens
+	if toolName == "exec" {
+		cmdStr := extractCommand(args)
+		if cmdStr != "" {
+			// Tokenized excluded_tools check
+			if blocked, tool := g.IsCommandBlocked(cmdStr); blocked {
+				return fmt.Errorf("command blocked: excluded tool '%s' detected", tool)
+			}
+		}
+	}
+
+	// 3. Check file tools — validate against forbidden_paths
+	filePathTools := map[string]bool{
+		"file_read": true, "file_write": true, "file_edit": true,
+	}
+	if filePathTools[toolName] {
+		path := extractPath(args)
+		if path != "" {
+			if forbidden, match := g.IsPathForbidden(path); forbidden {
+				return fmt.Errorf("path blocked: '%s' matches forbidden path '%s'", path, match)
+			}
+		}
+	}
+
+	// 4. Check SSH — validate host is not localhost/root
+	if toolName == "ssh_command" {
+		host, _ := args["host"].(string)
+		if host == "" {
+			host, _ = extractArg(args, "host")
+		}
+		if host != "" {
+			blockedHosts := []string{"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+			for _, bh := range blockedHosts {
+				if host == bh {
+					return fmt.Errorf("ssh blocked: cannot SSH to %s", host)
+				}
+			}
+		}
+	}
+
+	// 5. Check process kill — validate PID is numeric and not 1
+	if toolName == "process" {
+		action, _ := args["action"].(string)
+		if action == "" {
+			action, _ = extractArg(args, "action")
+		}
+		if action == "kill" {
+			pid, _ := args["pid"].(string)
+			if pid == "" {
+				pid, _ = extractArg(args, "pid")
+			}
+			if pid == "1" || pid == "0" {
+				return fmt.Errorf("process kill blocked: cannot kill PID %s", pid)
+			}
+		}
+	}
+
+	return nil
+}
+
+func extractCommand(args map[string]interface{}) string {
+	if cmd, ok := args["command"].(string); ok {
+		return cmd
+	}
+	if cmd, ok := args["cmd"].(string); ok {
+		return cmd
+	}
+	if raw, ok := args["raw"].(string); ok {
+		return raw
+	}
+	return ""
+}
+
+func extractPath(args map[string]interface{}) string {
+	if p, ok := args["path"].(string); ok {
+		return p
+	}
+	if p, ok := args["file_path"].(string); ok {
+		return p
+	}
+	return ""
+}
+
+func extractArg(args map[string]interface{}, key string) (string, bool) {
+	v, ok := args[key]
+	if !ok {
+		return "", false
+	}
+	s, ok := v.(string)
+	return s, ok
+}
+
+// ToolRegistry is a name→handler map with thread-safe access and security enforcement.
+type ToolRegistry struct {
+	mu     sync.RWMutex
+	tools  map[string]toolFunc
+	meta   map[string]string // name → description
+	guard  *SecurityGuard
+}
+
+func NewToolRegistry(guard *SecurityGuard) *ToolRegistry {
 	return &ToolRegistry{
 		tools: make(map[string]toolFunc),
 		meta:  make(map[string]string),
+		guard: guard,
 	}
 }
 
@@ -40,6 +282,13 @@ func (r *ToolRegistry) Register(name, description string, fn toolFunc) {
 }
 
 func (r *ToolRegistry) Execute(name string, args map[string]interface{}) (string, error) {
+	// Security check BEFORE executing the tool
+	if r.guard != nil {
+		if err := r.guard.CheckToolSecurity(name, args); err != nil {
+			return "", err
+		}
+	}
+
 	r.mu.RLock()
 	fn, ok := r.tools[name]
 	r.mu.RUnlock()
@@ -85,18 +334,16 @@ func (a *Agent) toolTelegramAPI(args map[string]interface{}) (string, error) {
 	}
 	payload, _ := args["payload"].(string)
 
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, method)
-	var out []byte
-	var err error
-	if payload != "" {
-		cmd := fmt.Sprintf(`curl -s -X POST -H "Content-Type: application/json" -d '%s' "%s"`, payload, url)
-		c := exec.Command("sh", "-c", cmd)
-		out, err = c.CombinedOutput()
-	} else {
-		cmd := fmt.Sprintf(`curl -s "%s"`, url)
-		c := exec.Command("sh", "-c", cmd)
-		out, err = c.CombinedOutput()
+	// Use exec.Command with explicit args to avoid shell injection
+	argsList := []string{"-s", "-X", "POST",
+		"-H", "Content-Type: application/json",
 	}
+	if payload != "" {
+		argsList = append(argsList, "-d", payload)
+	}
+	argsList = append(argsList, fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, method))
+
+	out, err := exec.Command("curl", argsList...).CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("telegram api error: %v", err)
 	}
@@ -113,8 +360,12 @@ func (a *Agent) toolSendFile(args map[string]interface{}) (string, error) {
 	if token == "" {
 		return "", fmt.Errorf("telegram bot token not configured")
 	}
-	cmd := fmt.Sprintf(`curl -s -X POST "https://api.telegram.org/bot%s/sendDocument" -F "chat_id=%s" -F "document=@%s"`, token, chatID, filePath)
-	out, err := exec.Command("sh", "-c", cmd).CombinedOutput()
+
+	out, err := exec.Command("curl", "-s", "-X", "POST",
+		fmt.Sprintf("https://api.telegram.org/bot%s/sendDocument", token),
+		"-F", "chat_id="+chatID,
+		"-F", "document=@"+filePath,
+	).CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("send file error: %v", err)
 	}

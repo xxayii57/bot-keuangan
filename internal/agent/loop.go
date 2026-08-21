@@ -75,9 +75,10 @@ type AnthropicResponse struct {
 }
 
 func New(cfg *config.Config) *Agent {
+	guard := NewSecurityGuard(cfg)
 	a := &Agent{
 		cfg:    cfg,
-		tools:  NewToolRegistry(),
+		tools:  NewToolRegistry(guard),
 		mcp:    NewMCPServerManager(),
 		skills: NewSkillsLoader(cfg.Skills.Directories),
 	}
@@ -789,7 +790,7 @@ func parseAction(line string) (string, map[string]interface{}) {
 func (a *Agent) toolExec(args map[string]interface{}) (string, error) {
 	cmdStr, _ := args["command"].(string)
 	if cmdStr == "" {
-		cmdStr, _ = args["cmd"].(string) // DSML format uses "cmd"
+		cmdStr, _ = args["cmd"].(string)
 	}
 	if raw, ok := args["raw"].(string); ok && cmdStr == "" {
 		var params map[string]interface{}
@@ -805,16 +806,11 @@ func (a *Agent) toolExec(args map[string]interface{}) (string, error) {
 		return "", fmt.Errorf("command is required")
 	}
 
-	excluded := a.cfg.Security.ExcludedTools
-	for _, ex := range excluded {
-		if strings.Contains(cmdStr, ex) {
-			return "", fmt.Errorf("command blocked: contains excluded tool '%s'", ex)
-		}
-	}
+	// Security checks are now handled by SecurityGuard in ToolRegistry.Execute
+	// before this function is called. No need for redundant checks here.
 
 	var cmd *exec.Cmd
 	if a.cfg.Security.Sandbox {
-		// Wrap command in firejail sandbox with restricted network, private home, and read-only system paths
 		cmd = exec.Command("firejail", "--private", "--net=none", "--quiet", "bash", "-c", cmdStr)
 	} else {
 		cmd = exec.Command("bash", "-c", cmdStr)
