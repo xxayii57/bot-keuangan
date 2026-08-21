@@ -3,13 +3,27 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/xxayii/intimclaw/internal/agent"
 	"github.com/xxayii/intimclaw/internal/config"
 )
 
 const VERSION = "0.1.0"
+
+// ANSI colors
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
+	colorCyan   = "\033[36m"
+	colorBold   = "\033[1m"
+	colorDim    = "\033[2m"
+)
 
 func main() {
 	args := os.Args[1:]
@@ -71,10 +85,37 @@ func main() {
 	}
 }
 
+// InputScanner reads lines from stdin.
+type InputScanner struct{}
+
+func NewInputScanner() *InputScanner {
+	return &InputScanner{}
+}
+
+func (s *InputScanner) Scan() (string, error) {
+	var input string
+	_, err := fmt.Scanln(&input)
+	return input, err
+}
+
+func printSplash() {
+	fmt.Println()
+	fmt.Println(colorCyan + `     ____                          ____ _
+    / ___|_      ____ _ _   _  __ _  __ _  ___ _ __ ___
+   | |   \ \ /\ / / _  | | | |/ _  |/ _  |/ _ \ '_ ` + "`" + ` __
+   | |___ \ V  V / (_| | |_| | (_| | (_| |  __/ | | | |
+    \____| \_/\_/ \__,_|\__, |\__,_|\__, |\___|_| |_| |
+                        |___/      |___/             ` + colorReset)
+	fmt.Println()
+	fmt.Printf("  %sIntimClaw%s  %sv%s  %sAI Agent System%s\n", colorBold, colorReset, colorDim, VERSION, colorReset, colorReset)
+	fmt.Printf("  %sOnline%s\n", colorGreen, colorReset)
+	fmt.Println()
+}
+
 func runAgent(args []string) {
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[intimclaw] config error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s[error] config: %v%s\n", colorRed, err, colorReset)
 		os.Exit(1)
 	}
 
@@ -107,35 +148,49 @@ func runAgent(args []string) {
 	a := agent.New(cfg)
 
 	if message != "" {
-		// One-shot mode
+		// One-shot mode — no splash
 		resp, err := a.Run(message)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[intimclaw] error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%serror: %v%s\n", colorRed, err, colorReset)
 			os.Exit(1)
 		}
 		fmt.Println(resp)
 	} else {
-		// Interactive mode
-		fmt.Printf("IntimClaw v%s — Interactive Mode\n", VERSION)
-		fmt.Println("Type your message. Ctrl+C to exit.")
+		// Interactive mode — splash + prompt
+		printSplash()
+
+		// Graceful Ctrl+C
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			<-sigCh
+			fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
+			os.Exit(0)
+		}()
+
+		scanner := NewInputScanner()
 		for {
-			fmt.Print("You: ")
-			var input string
-			fmt.Scanln(&input)
+			fmt.Printf("%s>%s ", colorCyan, colorReset)
+			input, err := scanner.Scan()
+			if err != nil {
+				fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
+				return
+			}
 			input = strings.TrimSpace(input)
 			if input == "" {
 				continue
 			}
 			if input == "exit" || input == "quit" {
-				fmt.Println("Bye!")
+				fmt.Printf("%sBye!%s\n", colorDim, colorReset)
 				return
 			}
+
 			resp, err := a.Run(input)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "[intimclaw] error: %v\n", err)
+				fmt.Fprintf(os.Stderr, "%serror: %v%s\n", colorRed, err, colorReset)
 				continue
 			}
-			fmt.Printf("\nAgent: %s\n\n", resp)
+			fmt.Printf("\n%s\n\n", resp)
 		}
 	}
 }
@@ -176,7 +231,7 @@ func handleConfig(args []string) {
 
 func printHelp() {
 	fmt.Print(`
-IntimClaw — The Ultimate AI Agent Framework
+IntimClaw — AI Agent System
 
 Usage:
   intimclaw                     Start interactive agent (CLI)
@@ -192,7 +247,7 @@ Usage:
 
 Examples:
   intimclaw -m "hello"
-  intimclaw agent --model opencode -m "cek RAM"
+  intimclaw agent --model gpt-4o -m "cek RAM"
   intimclaw web --port 18080 --hostname 0.0.0.0
 `)
 }
