@@ -122,6 +122,7 @@ fi
 echo -e "${YELLOW}Mengunduh $BINARY_NAME...${NC}"
 if ! curl -fsSL -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
     echo -e "${RED}[Error] Berkas biner '$BINARY_NAME' tidak ditemukan di rilis GitHub.${NC}"
+    echo -e "${RED}Pastikan rilis untuk platform ini tersedia.${NC}"
     rm -f "$TEMP_BIN" "$TEMP_SUM"
     exit 1
 fi
@@ -132,6 +133,7 @@ TARGET_CHECKSUM=$(grep "$BINARY_NAME" "$TEMP_SUM" | awk '{print $1}')
 
 if [ -z "$TARGET_CHECKSUM" ]; then
     echo -e "${RED}[Error] Checksum untuk biner '$BINARY_NAME' tidak ditemukan di berkas SHA256SUMS.${NC}"
+    echo -e "${RED}Berkas SHA256SUMS mungkin tidak berisi checksum untuk platform ini.${NC}"
     rm -f "$TEMP_BIN" "$TEMP_SUM"
     exit 1
 fi
@@ -154,6 +156,7 @@ fi
 
 if [ "$VERIFIED" = false ]; then
     echo -e "${RED}[Error] Checksum SHA256 tidak cocok! Berkas biner tidak aman atau rusak.${NC}"
+    echo -e "${RED}Diharapkan: $TARGET_CHECKSUM${NC}"
     rm -f "$TEMP_BIN" "$TEMP_SUM"
     exit 1
 fi
@@ -174,6 +177,7 @@ mkdir -p "$CONFIG_DIR"
 mkdir -p "$CONFIG_DIR/skills"
 mkdir -p "$CONFIG_DIR/persona"
 mkdir -p "$CONFIG_DIR/sessions"
+mkdir -p "$CONFIG_DIR/memory"
 
 # Download Python Wizard File dari Github
 REPO_RAW_URL="https://raw.githubusercontent.com/$GITHUB_REPO/main"

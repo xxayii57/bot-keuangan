@@ -39,25 +39,50 @@ if (-not (Test-Path $ConfigDir)) {
     New-Item -ItemType Directory -Force -Path (Join-Path $ConfigDir "skills") | Out-Null
     New-Item -ItemType Directory -Force -Path (Join-Path $ConfigDir "persona") | Out-Null
     New-Item -ItemType Directory -Force -Path (Join-Path $ConfigDir "sessions") | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $ConfigDir "memory") | Out-Null
 }
 
+# --- DETEKSI GITHUB RELEASE TERBARU ---
+$GITHUB_REPO = "xxayii57/bot-keuangan"
+$LatestReleaseUrl = "https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+
+Write-Host "Menghubungi API GitHub untuk mencari rilis terbaru..." -ForegroundColor Yellow
+try {
+    $ReleaseJson = Invoke-RestMethod -Uri $LatestReleaseUrl -UseBasicParsing
+    $TagName = $ReleaseJson.tag_name
+} catch {
+    Write-Error "Gagal menghubungi API GitHub. Periksa koneksi internet Anda."
+    Exit 1
+}
+
+if ([string]::IsNullOrEmpty($TagName)) {
+    Write-Error "Belum ada binary rilis IntimClaw di repositori ini."
+    Exit 1
+}
+
+Write-Host "Menemukan Rilis Terbaru: $TagName" -ForegroundColor Green
+
 # --- DOWNLOAD & VERIFIKASI ---
-$RepoUrl = "https://raw.githubusercontent.com/xxayii57/bot-keuangan/main"
-$BinaryUrl = "$RepoUrl/releases/$BinaryName"
-$ChecksumUrl = "$RepoUrl/docs/release/sha256.txt"
+$DownloadUrl = "https://github.com/$GITHUB_REPO/releases/download/$TagName/$BinaryName"
+$ChecksumUrl = "https://github.com/$GITHUB_REPO/releases/download/$TagName/SHA256SUMS"
 
-$TempExe = New-TemporaryFile
-$TempExePath = $TempExe.FullName
-Rename-Item -Path $TempExePath -NewName "$($TempExe.Name).exe" -Force
-$TempExePath = "$TempExePath.exe"
+$TempExe = Join-Path $env:TEMP "intimclaw_download.exe"
+$TempSum = Join-Path $env:TEMP "intimclaw_sha256.txt"
 
-Write-Host "Mengunduh berkas checksum..." -ForegroundColor Yellow
-$WebClient = New-Object System.Net.WebClient
-$ChecksumsData = $WebClient.DownloadString($ChecksumUrl)
+# Unduh checksum
+Write-Host "Mengunduh SHA256SUMS..." -ForegroundColor Yellow
+try {
+    Invoke-WebRequest -Uri $ChecksumUrl -OutFile $TempSum -UseBasicParsing
+} catch {
+    Write-Error "Gagal mengunduh berkas SHA256SUMS dari rilis."
+    Remove-Item $TempExe, $TempSum -Force -ErrorAction SilentlyContinue
+    Exit 1
+}
 
 # Temukan target checksum
 $TargetChecksum = ""
-$Lines = $ChecksumsData -split "`n"
+$ChecksumContent = Get-Content $TempSum -Raw
+$Lines = $ChecksumContent -split "`n"
 foreach ($Line in $Lines) {
     if ($Line -match $BinaryName) {
         $TargetChecksum = ($Line -split "\s+")[0].Trim()
@@ -66,26 +91,30 @@ foreach ($Line in $Lines) {
 }
 
 if ([string]::IsNullOrEmpty($TargetChecksum)) {
-    Write-Error "Checksum untuk biner '$BinaryName' tidak ditemukan di database rilis."
+    Write-Error "Checksum untuk biner '$BinaryName' tidak ditemukan di berkas SHA256SUMS."
+    Remove-Item $TempExe, $TempSum -Force -ErrorAction SilentlyContinue
     Exit 1
 }
 
-Write-Host "Mengunduh biner $BinaryName dari sumber aman..." -ForegroundColor Yellow
+# Unduh biner
+Write-Host "Mengunduh biner $BinaryName..." -ForegroundColor Yellow
 try {
-    Invoke-WebRequest -Uri $BinaryUrl -OutFile $TempExePath -UseBasicParsing
+    Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempExe -UseBasicParsing
 } catch {
-    Write-Host "Mencoba fallback lokal dari repo assets..." -ForegroundColor Yellow
-    $FallbackUrl = "$RepoUrl/intimclaw-android-project/app/src/main/assets/intimclaw-android"
-    Invoke-WebRequest -Uri $FallbackUrl -OutFile $TempExePath -UseBasicParsing
+    Write-Error "Gagal mengunduh biner '$BinaryName' dari rilis GitHub."
+    Remove-Item $TempExe, $TempSum -Force -ErrorAction SilentlyContinue
+    Exit 1
 }
 
 # Verifikasi Checksum SHA256
 Write-Host "Memverifikasi integritas berkas (SHA256 Checksum)..." -ForegroundColor Yellow
-$FileHash = (Get-FileHash -Path $TempExePath -Algorithm SHA256).Hash.ToLower()
+$FileHash = (Get-FileHash -Path $TempExe -Algorithm SHA256).Hash.ToLower()
 
 if ($FileHash -ne $TargetChecksum.ToLower()) {
-    Write-Error "Checksum SHA256 tidak cocok! Unduhan rusak atau berkas tidak aman dideteksi."
-    Remove-Item $TempExePath -Force
+    Write-Error "Checksum SHA256 tidak cocok! Unduhan rusak atau berkas tidak aman."
+    Write-Host "Diharapkan: $TargetChecksum" -ForegroundColor Red
+    Write-Host "Ditemukan:  $FileHash" -ForegroundColor Red
+    Remove-Item $TempExe, $TempSum -Force -ErrorAction SilentlyContinue
     Exit 1
 }
 
@@ -93,7 +122,8 @@ Write-Host "✓ Verifikasi checksum berhasil. Berkas biner aman!" -ForegroundCol
 
 # --- INSTALASI BINER ---
 $FinalBinaryPath = Join-Path $UserLocalBin "intimclaw.exe"
-Move-Item -Path $TempExePath -Destination $FinalBinaryPath -Force
+Move-Item -Path $TempExe -Destination $FinalBinaryPath -Force
+Remove-Item $TempSum -Force -ErrorAction SilentlyContinue
 
 # --- PENGATURAN USER PATH ENVIRONMENT (IDEMPOTENT) ---
 Write-Host "Mengonfigurasi System PATH..." -ForegroundColor Yellow

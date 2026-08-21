@@ -22,23 +22,25 @@ mkdir -p releases
 rm -f releases/*
 
 # --- KOMPILASI SILANG (CROSS COMPILATION) ---
-echo -e "${YELLOW}[1/6] Mengompilasi Linux ARM64 (aarch64)...${NC}"
-GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o releases/intimclaw-linux-arm64
+TARGETS=(
+    "linux:arm64:intimclaw-linux-arm64"
+    "linux:amd64:intimclaw-linux-amd64"
+    "darwin:arm64:intimclaw-darwin-arm64"
+    "darwin:amd64:intimclaw-darwin-amd64"
+    "windows:amd64:intimclaw-windows-amd64.exe"
+    "windows:arm64:intimclaw-windows-arm64.exe"
+    "android:arm64:intimclaw-android-arm64"
+)
 
-echo -e "${YELLOW}[2/6] Mengompilasi Linux x86_64 (amd64)...${NC}"
-GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o releases/intimclaw-linux-amd64
+TOTAL=${#TARGETS[@]}
+COUNT=0
 
-echo -e "${YELLOW}[3/6] Mengompilasi macOS ARM64 (Apple Silicon)...${NC}"
-GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o releases/intimclaw-darwin-arm64
-
-echo -e "${YELLOW}[4/6] Mengompilasi macOS x86_64 (Intel)...${NC}"
-GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o releases/intimclaw-darwin-amd64
-
-echo -e "${YELLOW}[5/6] Mengompilasi Windows x86_64...${NC}"
-GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o releases/intimclaw-windows-amd64.exe
-
-echo -e "${YELLOW}[6/6] Mengompilasi Android/Termux ARM64...${NC}"
-GOOS=android GOARCH=arm64 go build -ldflags="-s -w" -o releases/intimclaw-android-arm64
+for target in "${TARGETS[@]}"; do
+    IFS=':' read -r GOOS GOARCH OUTPUT <<< "$target"
+    COUNT=$((COUNT + 1))
+    echo -e "${YELLOW}[$COUNT/$TOTAL] Mengompilasi $GOOS/$GOARCH → $OUTPUT...${NC}"
+    GOOS="$GOOS" GOARCH="$GOARCH" go build -ldflags="-s -w" -o "releases/$OUTPUT"
+done
 
 # --- GENERATE CHECKSUM SHA256 ---
 echo -e "${YELLOW}Menghitung Checksum SHA256 untuk seluruh rilis...${NC}"
