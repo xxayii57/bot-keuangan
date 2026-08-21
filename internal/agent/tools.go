@@ -1,13 +1,14 @@
 package agent
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/xxayii/intimclaw/internal/config"
 )
@@ -132,19 +133,6 @@ func tokenizeCommand(cmd string) []string {
 		tokens = append(tokens, current.String())
 	}
 	return tokens
-}
-
-// wordBoundaryMatch checks if excluded tool matches as a whole word in the command.
-var wordBoundaryRegexCache = make(map[string]*regexp.Regexp)
-
-func wordBoundaryMatch(cmd, tool string) bool {
-	pattern, ok := wordBoundaryRegexCache[tool]
-	if !ok {
-		// Match tool name as a whole word: preceded by start/whitespace/;/|/& and followed by end/whitespace/;/|/&/( '
-		pattern = regexp.MustCompile(`(?:^|[;\s|&/` + "`" + `])` + regexp.QuoteMeta(tool) + `(?:$|[;\s|&/'"(])`)
-		wordBoundaryRegexCache[tool] = pattern
-	}
-	return pattern.MatchString(cmd)
 }
 
 // CheckToolSecurity validates a tool call against the security policy.
@@ -403,8 +391,39 @@ func (a *Agent) toolManageWallets(args map[string]interface{}) (string, error) {
 		if name == "" {
 			return "", fmt.Errorf("name is required for add")
 		}
-		return fmt.Sprintf("Wallet '%s' registered. Use config to set address/key.", name), nil
+		data := readJSON("wallets")
+		var wallets []map[string]string
+		json.Unmarshal([]byte(data), &wallets)
+		for _, w := range wallets {
+			if w["name"] == name {
+				return fmt.Sprintf("Wallet '%s' already exists.", name), nil
+			}
+		}
+		wallets = append(wallets, map[string]string{"name": name, "status": "registered"})
+		out, _ := json.Marshal(wallets)
+		writeJSON("wallets", string(out))
+		return fmt.Sprintf("Wallet '%s' registered.", name), nil
 	case "delete":
+		if name == "" {
+			return "", fmt.Errorf("name is required for delete")
+		}
+		data := readJSON("wallets")
+		var wallets []map[string]string
+		json.Unmarshal([]byte(data), &wallets)
+		var newWallets []map[string]string
+		deleted := false
+		for _, w := range wallets {
+			if w["name"] == name {
+				deleted = true
+				continue
+			}
+			newWallets = append(newWallets, w)
+		}
+		if !deleted {
+			return fmt.Sprintf("Wallet '%s' not found.", name), nil
+		}
+		out, _ := json.Marshal(newWallets)
+		writeJSON("wallets", string(out))
 		return fmt.Sprintf("Wallet '%s' deleted.", name), nil
 	default:
 		return "Usage: action=list|add|delete, name=<wallet_name>", nil
@@ -421,9 +440,36 @@ func (a *Agent) toolManageAirdropTasks(args map[string]interface{}) (string, err
 		if task == "" {
 			return "", fmt.Errorf("task description is required")
 		}
+		data := readJSON("airdrop_tasks")
+		var tasks []map[string]string
+		json.Unmarshal([]byte(data), &tasks)
+		tasks = append(tasks, map[string]string{"task": task, "status": "pending"})
+		out, _ := json.Marshal(tasks)
+		writeJSON("airdrop_tasks", string(out))
 		return fmt.Sprintf("Airdrop task added: %s", task), nil
+	case "complete":
+		if task == "" {
+			return "", fmt.Errorf("task description is required")
+		}
+		data := readJSON("airdrop_tasks")
+		var tasks []map[string]string
+		json.Unmarshal([]byte(data), &tasks)
+		found := false
+		for i, t := range tasks {
+			if t["task"] == task {
+				tasks[i]["status"] = "completed"
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Sprintf("Task '%s' not found.", task), nil
+		}
+		out, _ := json.Marshal(tasks)
+		writeJSON("airdrop_tasks", string(out))
+		return fmt.Sprintf("Task '%s' marked completed.", task), nil
 	default:
-		return "Usage: action=list|add, task=<description>", nil
+		return "Usage: action=list|add|complete, task=<description>", nil
 	}
 }
 
@@ -435,6 +481,19 @@ func (a *Agent) toolCostLedger(args map[string]interface{}) (string, error) {
 	case "add":
 		service, _ := args["service"].(string)
 		amount, _ := args["amount"].(string)
+		if service == "" || amount == "" {
+			return "", fmt.Errorf("service and amount are required")
+		}
+		data := readJSON("cost_ledger")
+		var entries []map[string]string
+		json.Unmarshal([]byte(data), &entries)
+		entries = append(entries, map[string]string{
+			"service": service,
+			"amount":  amount,
+			"time":    time.Now().Format(time.RFC3339),
+		})
+		out, _ := json.Marshal(entries)
+		writeJSON("cost_ledger", string(out))
 		return fmt.Sprintf("Cost logged: %s = %s", service, amount), nil
 	default:
 		return "Usage: action=list|add, service=<name>, amount=<value>", nil
@@ -451,8 +510,37 @@ func (a *Agent) toolAlerts(args map[string]interface{}) (string, error) {
 		if msg == "" {
 			return "", fmt.Errorf("message is required")
 		}
+		data := readJSON("alerts")
+		var alerts []map[string]string
+		json.Unmarshal([]byte(data), &alerts)
+		alerts = append(alerts, map[string]string{
+			"message": msg,
+			"status":  "active",
+			"time":    time.Now().Format(time.RFC3339),
+		})
+		out, _ := json.Marshal(alerts)
+		writeJSON("alerts", string(out))
 		return fmt.Sprintf("Alert created: %s", msg), nil
 	case "dismiss":
+		if msg == "" {
+			return "", fmt.Errorf("message is required")
+		}
+		data := readJSON("alerts")
+		var alerts []map[string]string
+		json.Unmarshal([]byte(data), &alerts)
+		found := false
+		for i, a := range alerts {
+			if a["message"] == msg && a["status"] == "active" {
+				alerts[i]["status"] = "dismissed"
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Sprintf("Alert '%s' not found or already dismissed.", msg), nil
+		}
+		out, _ := json.Marshal(alerts)
+		writeJSON("alerts", string(out))
 		return fmt.Sprintf("Alert dismissed: %s", msg), nil
 	default:
 		return "Usage: action=list|create|dismiss, message=<text>", nil
@@ -524,7 +612,7 @@ func (a *Agent) toolSkillEngine(args map[string]interface{}) (string, error) {
 
 func (a *Agent) toolCron(args map[string]interface{}) (string, error) {
 	action, _ := args["action"].(string)
-	return fmt.Sprintf("Cron action '%s': cron system is not yet implemented.", action), nil
+	return "", fmt.Errorf("cron system is not yet implemented (action=%s)", action)
 }
 
 func (a *Agent) toolSystemInfo(args map[string]interface{}) (string, error) {

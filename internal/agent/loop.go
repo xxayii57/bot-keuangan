@@ -176,19 +176,42 @@ func (a *Agent) SetModel(model string) {
 	}
 }
 
-func (a *Agent) callLLM(currentModel string, messages []Message, systemPrompt string, provider config.ProviderConfig) (string, error) {
-	fallbackModels := []string{
-		"jr/f/deepseek-v4-flash-free",
-		"jr/f/mimo-v2.5-free",
-		"jr/f/nemotron-3-ultra-free",
+// buildFallbackModels collects all models from configured providers as fallback candidates,
+// excluding the current model. Returns list of (model, provider) pairs.
+func (a *Agent) buildFallbackModels(currentModel string, currentProvider config.ProviderConfig) []struct {
+	model    string
+	provider config.ProviderConfig
+} {
+	seen := map[string]bool{currentModel: true}
+	var fallbacks []struct {
+		model    string
+		provider config.ProviderConfig
 	}
+	for _, p := range a.cfg.Providers {
+		for _, m := range p.Models {
+			if !seen[m] {
+				seen[m] = true
+				fallbacks = append(fallbacks, struct {
+					model    string
+					provider config.ProviderConfig
+				}{model: m, provider: p})
+			}
+		}
+	}
+	return fallbacks
+}
+
+func (a *Agent) callLLM(currentModel string, messages []Message, systemPrompt string, provider config.ProviderConfig) (string, error) {
+	fallbacks := a.buildFallbackModels(currentModel, provider)
 
 	var resp *http.Response
 	var err error
 	var client = &http.Client{Timeout: 60 * time.Second}
 	var req *http.Request
 
-	for try := 0; try < len(fallbackModels)+1; try++ {
+	// tryCount: 0 = original model, 1..N = fallback models
+	tryCount := len(fallbacks) + 1
+	for try := 0; try < tryCount; try++ {
 		var reqJSON []byte
 		var url string
 		isAnthropic := provider.Type == "anthropic" || strings.Contains(strings.ToLower(provider.Name), "anthropic")
@@ -226,7 +249,7 @@ func (a *Agent) callLLM(currentModel string, messages []Message, systemPrompt st
 					url = "http://localhost:11434"
 				}
 			}
-			url = strings.TrimSuffix(url, "/") + "/v1" // Standard suffix append to handle clean URL form
+			url = strings.TrimSuffix(url, "/") + "/v1"
 			if provider.Type == "groq" || strings.Contains(strings.ToLower(provider.Name), "groq") {
 				url = "https://api.groq.com/openai/v1"
 			} else if provider.Type == "ollama" || strings.Contains(strings.ToLower(provider.Name), "ollama") {
@@ -248,7 +271,7 @@ func (a *Agent) callLLM(currentModel string, messages []Message, systemPrompt st
 			return "", errReq
 		}
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		if isAnthropic {
 			req.Header.Set("x-api-key", provider.APIKey)
 			req.Header.Set("anthropic-version", "2023-06-01")
@@ -266,21 +289,12 @@ func (a *Agent) callLLM(currentModel string, messages []Message, systemPrompt st
 			break
 		}
 
-		if try < len(fallbackModels) {
-			fallback := fallbackModels[try]
-			if fallback == currentModel {
-				continue
-			}
-			fmt.Printf("[intimclaw] Fallback: model %s failed. Trying fallback %s...\n", currentModel, fallback)
-			currentModel = fallback
-			for _, p := range a.cfg.Providers {
-				for _, m := range p.Models {
-					if m == fallback {
-						provider = p
-						break
-					}
-				}
-			}
+		// Try next fallback
+		if try < len(fallbacks) {
+			fb := fallbacks[try]
+			fmt.Printf("[intimclaw] Fallback: model %s failed. Trying %s (%s)...\n", currentModel, fb.model, fb.provider.Name)
+			currentModel = fb.model
+			provider = fb.provider
 		}
 	}
 
@@ -293,7 +307,8 @@ func (a *Agent) callLLM(currentModel string, messages []Message, systemPrompt st
 			body = string(b)
 			resp.Body.Close()
 		}
-		return "", fmt.Errorf("API request failed with status %d: %s (err: %v)", status, body, err)
+		return "", fmt.Errorf("API request failed (model=%s, provider=%s): status %d: %s (err: %v)",
+			currentModel, provider.Name, status, truncate(body, 200), err)
 	}
 
 	defer resp.Body.Close()

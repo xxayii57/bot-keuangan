@@ -14,9 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/xxayii/intimclaw/internal/agent"
@@ -667,7 +665,39 @@ func handleChannels(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleChannelToggle(w http.ResponseWriter, r *http.Request) {
-	jsonOK(w, "Channel toggled")
+	if r.Method != "POST" {
+		jsonError(w, "Method not allowed", 405)
+		return
+	}
+	body, _ := io.ReadAll(r.Body)
+	var req struct {
+		Name    string `json:"name"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		jsonError(w, "Invalid data: "+err.Error(), 400)
+		return
+	}
+	switch req.Name {
+	case "Telegram":
+		cfg.Channels.Telegram.Enabled = req.Enabled
+	case "Discord":
+		cfg.Channels.Discord.Enabled = req.Enabled
+	case "WebChat":
+		cfg.Channels.WebChat.Enabled = req.Enabled
+	default:
+		jsonError(w, "Unsupported channel: "+req.Name, 400)
+		return
+	}
+	if err := config.Save(cfg); err != nil {
+		jsonError(w, "Failed to save config: "+err.Error(), 500)
+		return
+	}
+	status := "disabled"
+	if req.Enabled {
+		status = "enabled"
+	}
+	jsonOK(w, req.Name+" channel "+status)
 }
 
 func handleChannelSave(w http.ResponseWriter, r *http.Request) {
@@ -1193,17 +1223,93 @@ func handleMCPRemove(w http.ResponseWriter, r *http.Request) {
 // ═══════════════════════════════════════════════════════════════
 // Sessions
 // ═══════════════════════════════════════════════════════════════
-func handleSessions(w http.ResponseWriter, r *http.Request) {
-	sessions := []map[string]interface{}{
-		{"id": "ses_001", "title": "IntimClaw setup", "model": cfg.Agent.Model, "created": "now"},
+type SessionMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type Session struct {
+	ID       string           `json:"id"`
+	Title    string           `json:"title"`
+	Model    string           `json:"model"`
+	Created  time.Time        `json:"created"`
+	Messages []SessionMessage `json:"messages,omitempty"`
+}
+
+func sessionDataPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".intimclaw", "data", "sessions.json")
+}
+
+func loadSessions() []Session {
+	data, err := os.ReadFile(sessionDataPath())
+	if err != nil {
+		return []Session{}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(sessions)
+	var sessions []Session
+	json.Unmarshal(data, &sessions)
+	return sessions
+}
+
+func saveSessions(sessions []Session) {
+	out, _ := json.MarshalIndent(sessions, "", "  ")
+	os.MkdirAll(filepath.Dir(sessionDataPath()), 0755)
+	os.WriteFile(sessionDataPath(), out, 0644)
+}
+
+func handleSessions(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		sessions := loadSessions()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(sessions)
+	case "POST":
+		body, _ := io.ReadAll(r.Body)
+		var req struct {
+			Title string `json:"title"`
+			Model string `json:"model"`
+		}
+		if err := json.Unmarshal(body, &req); err != nil {
+			jsonError(w, "Invalid data", 400)
+			return
+		}
+		sessions := loadSessions()
+		sess := Session{
+			ID:      fmt.Sprintf("ses_%d", time.Now().UnixNano()),
+			Title:   req.Title,
+			Model:   req.Model,
+			Created: time.Now(),
+		}
+		if sess.Title == "" {
+			sess.Title = "New session"
+		}
+		if sess.Model == "" {
+			sess.Model = cfg.Agent.Model
+		}
+		sessions = append(sessions, sess)
+		saveSessions(sessions)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(sess)
+	default:
+		jsonError(w, "Method not allowed", 405)
+	}
 }
 
 func handleSessionMessages(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode([]map[string]interface{}{})
+	id := strings.TrimPrefix(r.URL.Path, "/api/sessions/")
+	if id == "" {
+		jsonError(w, "Session ID required", 400)
+		return
+	}
+	sessions := loadSessions()
+	for _, s := range sessions {
+		if s.ID == id {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(s.Messages)
+			return
+		}
+	}
+	jsonError(w, "Session not found", 404)
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1320,63 +1426,7 @@ func getWebUIDir() string {
 	return "webui"
 }
 
-func getDiskUsage() string {
-	var stat syscall.Statfs_t
-	wd, err := os.Getwd()
-	if err != nil {
-		wd = "/"
-	}
-	err = syscall.Statfs(wd, &stat)
-	if err != nil {
-		return "N/A"
-	}
-	
-	freeBytes := stat.Bavail * uint64(stat.Bsize)
-	totalBytes := stat.Blocks * uint64(stat.Bsize)
-	freeGB := float64(freeBytes) / (1024 * 1024 * 1024)
-	totalGB := float64(totalBytes) / (1024 * 1024 * 1024)
-	return fmt.Sprintf("%.1fGB free / %.1fGB total", freeGB, totalGB)
-}
 
-func getRAMUsage() string {
-	file, err := os.Open("/proc/meminfo")
-	if err != nil {
-		return "N/A"
-	}
-	defer file.Close()
-
-	var memTotal, memAvailable, memFree uint64
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
-		}
-		name := strings.TrimSuffix(fields[0], ":")
-		val, _ := strconv.ParseUint(fields[1], 10, 64)
-		switch name {
-		case "MemTotal":
-			memTotal = val
-		case "MemAvailable":
-			memAvailable = val
-		case "MemFree":
-			memFree = val
-		}
-	}
-	
-	if memAvailable == 0 {
-		memAvailable = memFree
-	}
-
-	totalMB := float64(memTotal) / 1024
-	availableMB := float64(memAvailable) / 1024
-	
-	if totalMB > 1024 {
-		return fmt.Sprintf("%.1fGB available / %.1fGB total", availableMB/1024, totalMB/1024)
-	}
-	return fmt.Sprintf("%.0fMB available / %.0fMB total", availableMB, totalMB)
-}
 
 func formatUptime(secs int) string {
 	h := secs / 3600
