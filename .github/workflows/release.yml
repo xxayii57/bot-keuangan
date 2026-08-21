@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            output: intimclaw-linux-amd64
+          - goos: linux
+            goarch: arm64
+            output: intimclaw-linux-arm64
+          - goos: darwin
+            goarch: amd64
+            output: intimclaw-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            output: intimclaw-darwin-arm64
+          - goos: windows
+            goarch: amd64
+            output: intimclaw-windows-amd64.exe
+          - goos: windows
+            goarch: arm64
+            output: intimclaw-windows-arm64.exe
+          - goos: android
+            goarch: arm64
+            output: intimclaw-android-arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Create skills.enc placeholder
+        run: touch internal/agent/skills.enc
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -ldflags="-s -w" -o releases/${{ matrix.output }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: releases/${{ matrix.output }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: releases/
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS
+        working-directory: releases
+        run: |
+          sha256sum intimclaw-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            releases/intimclaw-linux-amd64
+            releases/intimclaw-linux-arm64
+            releases/intimclaw-darwin-amd64
+            releases/intimclaw-darwin-arm64
+            releases/intimclaw-windows-amd64.exe
+            releases/intimclaw-windows-arm64.exe
+            releases/intimclaw-android-arm64
+            releases/SHA256SUMS
+          generate_release_notes: true
