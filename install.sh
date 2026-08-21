@@ -167,21 +167,13 @@ chmod +x "$FINAL_BINARY_PATH"
 rm -f "$TEMP_SUM"
 
 # --- SETUP DIREKTORI DATA & CONFIG ---
-CONFIG_DIR=""
-WIZARD_DEST=""
-
-if [ "$IS_TERMUX" = true ]; then
-    CONFIG_DIR="$HOME/.intimclaw"
-    WIZARD_DEST="$HOME/intimclaw_wizard.py"
-else
-    CONFIG_DIR="$HOME/.config/intimclaw"
-    mkdir -p "$HOME/.local/share/intimclaw/skills"
-    mkdir -p "$HOME/.local/share/intimclaw/superintim"
-    mkdir -p "$HOME/.local/share/intimclaw/sessions"
-    WIZARD_DEST="$CONFIG_DIR/intimclaw_wizard.py"
-fi
+CONFIG_DIR="$HOME/.intimclaw"
+WIZARD_DEST="$CONFIG_DIR/intimclaw_wizard.py"
 
 mkdir -p "$CONFIG_DIR"
+mkdir -p "$CONFIG_DIR/skills"
+mkdir -p "$CONFIG_DIR/persona"
+mkdir -p "$CONFIG_DIR/sessions"
 
 # Download Python Wizard File dari Github
 REPO_RAW_URL="https://raw.githubusercontent.com/$GITHUB_REPO/main"
@@ -201,15 +193,13 @@ fi
 
 if [ "$IS_TERMUX" = true ]; then
     INSTALL_DIR="$PREFIX/bin"
-    CONFIG_DIR="$HOME/.intimclaw"
-    WIZARD_DEST="$HOME/intimclaw_wizard.py"
-    FINAL_BINARY_PATH="$INSTALL_DIR/intimclaw-bin"
 else
     INSTALL_DIR="$HOME/.local/bin"
-    CONFIG_DIR="$HOME/.config/intimclaw"
-    WIZARD_DEST="$CONFIG_DIR/intimclaw_wizard.py"
-    FINAL_BINARY_PATH="$INSTALL_DIR/intimclaw-bin"
 fi
+
+CONFIG_DIR="$HOME/.intimclaw"
+WIZARD_DEST="$CONFIG_DIR/intimclaw_wizard.py"
+FINAL_BINARY_PATH="$INSTALL_DIR/intimclaw-bin"
 
 GITHUB_REPO="xxayii57/bot-keuangan"
 REPO_RAW_URL="https://raw.githubusercontent.com/xxayii57/bot-keuangan/main"
@@ -308,8 +298,6 @@ if [ "$1" = "uninstall" ]; then
     if [ "$PURGE" = true ]; then
         echo "Melakukan pembersihan total (--purge)..."
         rm -rf "$CONFIG_DIR"
-        [ "$IS_TERMUX" = false ] && rm -rf "$HOME/.local/share/intimclaw"
-        [ "$IS_TERMUX" = false ] && rm -rf "$HOME/.cache/intimclaw"
         echo "✓ Semua data personal, memori, skills, dan konfigurasi telah dihapus."
     else
         echo "✓ Biner aplikasi berhasil dihapus."

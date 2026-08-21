@@ -37,7 +37,7 @@ $ConfigDir = Join-Path $HOME ".intimclaw"
 if (-not (Test-Path $ConfigDir)) {
     New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
     New-Item -ItemType Directory -Force -Path (Join-Path $ConfigDir "skills") | Out-Null
-    New-Item -ItemType Directory -Force -Path (Join-Path $ConfigDir "superintim") | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $ConfigDir "persona") | Out-Null
     New-Item -ItemType Directory -Force -Path (Join-Path $ConfigDir "sessions") | Out-Null
 }
 
@@ -115,33 +115,55 @@ if (-not (Test-Path $ConfigPath)) {
 [agent]
 name = "intimclaw"
 version = "0.1.0"
-model_provider = ""
+provider = ""
 model = ""
-persona = "superintim"
+persona = "default"
 
-[providers.gemini]
+[[providers]]
+name = "openai"
 type = "openai-compatible"
-base_url = "https://generativelanguage.googleapis.com/v1beta"
+base_url = "https://api.openai.com/v1"
 api_key = ""
-models = ["gemini-2.5-flash", "gemini-2.5-pro"]
+models = ["gpt-4o-mini", "gpt-4o"]
 
-[providers.anthropic]
+[[providers]]
+name = "anthropic"
 type = "anthropic"
 base_url = "https://api.anthropic.com/v1"
 api_key = ""
 models = ["claude-3-5-sonnet-latest"]
 
-[providers.openai]
+[[providers]]
+name = "ollama"
 type = "openai-compatible"
-base_url = "https://api.openai.com/v1"
+base_url = "http://localhost:11434/v1"
 api_key = ""
-models = ["gpt-4o-mini"]
+models = ["llama3.2", "codellama"]
 
-[providers.groq]
+[[providers]]
+name = "groq"
 type = "openai-compatible"
 base_url = "https://api.groq.com/openai/v1"
 api_key = ""
 models = ["llama-3.3-70b-versatile"]
+
+[channels.telegram]
+enabled = false
+bot_token = ""
+owner_id = 0
+mention_only = false
+
+[channels.discord]
+enabled = false
+bot_token = ""
+
+[channels.webchat]
+enabled = true
+port = 18080
+host = "127.0.0.1"
+
+[mcp]
+enabled = false
 
 [skills]
 enabled = true
@@ -150,18 +172,29 @@ directories = ["$($ConfigDir.Replace('\', '\\'))\\skills"]
 [memory]
 backend = "sqlite"
 semantic_search = true
+decay_days = 30
 
 [security]
 risk_profile = "default"
 sandbox = false
-excluded_tools = ["rm", "mkfs", "dd", "shutdown"]
-forbidden_paths = [".ssh", ".gnupg"]
+excluded_tools = ["rm", "mkfs", "dd", "shutdown", "poweroff"]
+forbidden_paths = [".ssh", ".gnupg", ".aws"]
+
+[webui]
+enabled = true
+port = 18080
+host = "127.0.0.1"
+theme = "intimclaw"
+
+[cron]
+enabled = true
+max_jobs = 50
 "@
     Set-Content -Path $ConfigPath -Value $ConfigContent
 }
 
 # Buat SOUL.md jika belum ada
-$SoulPath = Join-Path $ConfigDir "superintim\SOUL.md"
+$SoulPath = Join-Path $ConfigDir "persona\SOUL.md"
 if (-not (Test-Path $SoulPath)) {
     $SoulContent = @"
 # SOUL OF INTIMCLAW AGENTIC CODER

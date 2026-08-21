@@ -5,106 +5,65 @@ import sys
 def get_paths():
     home = os.environ.get("HOME", os.path.expanduser("~"))
     is_termux = "PREFIX" in os.environ and "com.termux" in os.environ["PREFIX"]
-    
-    if is_termux or os.path.exists("/data/data/com.termux/files/usr/"):
-        base_dir = os.path.join(home, ".intimclaw")
-        return {
-            "is_termux": True,
-            "config_dir": base_dir,
-            "config_path": os.path.join(base_dir, "config.toml"),
-            "skills_dir": os.path.join(base_dir, "skills"),
-            "soul_dir": os.path.join(base_dir, "superintim"),
-            "sessions_dir": os.path.join(base_dir, "sessions"),
-            "memory_dir": base_dir
-        }
-    else:
-        # Standard XDG Directory specification for Linux/macOS
-        config_dir = os.environ.get("XDG_CONFIG_HOME", os.path.join(home, ".config"))
-        data_dir = os.environ.get("XDG_DATA_HOME", os.path.join(home, ".local", "share"))
-        
-        intimclaw_config = os.path.join(config_dir, "intimclaw")
-        intimclaw_data = os.path.join(data_dir, "intimclaw")
-        
-        return {
-            "is_termux": False,
-            "config_dir": intimclaw_config,
-            "config_path": os.path.join(intimclaw_config, "config.toml"),
-            "skills_dir": os.path.join(intimclaw_data, "skills"),
-            "soul_dir": os.path.join(intimclaw_data, "superintim"),
-            "sessions_dir": os.path.join(intimclaw_data, "sessions"),
-            "memory_dir": intimclaw_data
-        }
+
+    base_dir = os.path.join(home, ".intimclaw")
+    return {
+        "is_termux": is_termux,
+        "config_dir": base_dir,
+        "config_path": os.path.join(base_dir, "config.toml"),
+        "skills_dir": os.path.join(base_dir, "skills"),
+        "persona_dir": os.path.join(base_dir, "persona"),
+        "sessions_dir": os.path.join(base_dir, "sessions"),
+        "memory_path": os.path.join(base_dir, "memory.db"),
+        "data_dir": base_dir,
+    }
 
 def check_config():
     paths = get_paths()
     config_path = paths["config_path"]
-    
+
     if not os.path.exists(config_path):
         return False
-        
+
     with open(config_path, "r") as f:
         content = f.read()
-        
-    # Check if we have a model_provider configured
-    provider = ""
+
+    has_provider = False
+    has_api_key = False
     for line in content.split("\n"):
-        if line.strip().startswith("model_provider"):
-            parts = line.split("=")
-            if len(parts) == 2:
-                provider = parts[1].replace('"', '').replace("'", "").strip()
-                
-    if not provider:
-        return False
-        
-    # Look for [providers.provider] block and check api_key
-    target_block = f"[providers.{provider}]"
-    if target_block not in content:
-        return False
-        
-    block_index = content.find(target_block)
-    after_block = content[block_index:]
-    
-    # Find next section or end of file to isolate provider configuration
-    next_section = len(content)
-    for section_name in ["[providers.", "[agent]", "[skills]", "[memory]", "[security]"]:
-        idx = after_block.find(section_name, len(target_block))
-        if idx != -1 and idx < next_section:
-            next_section = idx
-            
-    provider_config = after_block[:next_section]
-    
-    # Check if api_key has a value
-    for line in provider_config.split("\n"):
-        if line.strip().startswith("api_key"):
-            parts = line.split("=")
-            if len(parts) == 2:
-                val = parts[1].replace('"', '').replace("'", "").strip()
-                if val:
-                    return True
-                    
-    return False
+        stripped = line.strip()
+        if stripped.startswith("provider") and "=" in stripped:
+            val = stripped.split("=", 1)[1].strip().strip('"').strip("'")
+            if val:
+                has_provider = True
+        if stripped.startswith("api_key") and "=" in stripped:
+            val = stripped.split("=", 1)[1].strip().strip('"').strip("'")
+            if val:
+                has_api_key = True
+
+    return has_provider and has_api_key
 
 def run_wizard():
     print("\n=======================================================")
     print("         WELCOME TO INTIMCLAW SETUP WIZARD             ")
     print("=======================================================")
-    print("Sepertinya ini pertama kalinya Anda menjalankan IntimClaw.")
-    print("Silakan lakukan konfigurasi AI Provider Anda agar Agent bisa bekerja.")
+    print("This appears to be your first time running IntimClaw.")
+    print("Configure your AI Provider to get started.")
     print("-------------------------------------------------------")
-    
-    print("\nPilih AI Provider Utama Anda:")
-    print("1) Google Gemini (Sangat disarankan - Gratis & Cepat)")
-    print("2) Anthropic Claude (Sangat Pintar - Butuh API Key)")
-    print("3) OpenAI GPT (Standar Industri)")
-    print("4) Groq (Super Cepat)")
-    print("5) Custom OpenAI-Compatible (Ollama, LM Studio, dll)")
-    
-    choice = input("\nMasukkan nomor pilihan Anda (1-5): ").strip()
-    
+
+    print("\nSelect your primary AI Provider:")
+    print("1) Google Gemini (Recommended - Free & Fast)")
+    print("2) Anthropic Claude (Smart - Requires API Key)")
+    print("3) OpenAI GPT (Industry Standard)")
+    print("4) Groq (Fastest Inference)")
+    print("5) Custom OpenAI-Compatible (Ollama, LM Studio, etc.)")
+
+    choice = input("\nEnter your choice (1-5): ").strip()
+
     provider = ""
     default_model = ""
     api_url = ""
-    
+
     if choice == "1":
         provider = "gemini"
         default_model = "gemini-2.5-flash"
@@ -123,77 +82,84 @@ def run_wizard():
         api_url = "https://api.groq.com/openai/v1"
     else:
         provider = "custom"
-        api_url = input("Masukkan Base URL API Anda (contoh: http://localhost:11434/v1): ").strip()
-        default_model = input("Masukkan Nama Model Default (contoh: deepseek-v3): ").strip()
-        
-    api_key = input(f"Masukkan API Key {provider.upper()} Anda: ").strip()
-    
+        api_url = input("Enter your API Base URL (e.g. http://localhost:11434/v1): ").strip()
+        default_model = input("Enter default model name (e.g. llama3.2): ").strip()
+
+    api_key = input(f"Enter your {provider.upper()} API Key: ").strip()
+
     if not api_key:
-        print("\n[Error] API Key tidak boleh kosong! Setup dibatalkan.")
+        print("\n[Error] API Key cannot be empty! Setup cancelled.")
         sys.exit(1)
-        
+
     paths = get_paths()
-    
+
     os.makedirs(paths["config_dir"], exist_ok=True)
     os.makedirs(paths["skills_dir"], exist_ok=True)
-    os.makedirs(paths["soul_dir"], exist_ok=True)
-    os.makedirs(paths["sessions_dir"], exist_ok=True)
-    
-    config_path = paths["config_path"]
-    
-    # Generate config.toml
-    provider_type = "anthropic" if choice == "2" else "openai-compatible"
-    config_content = f"""# config.toml — IntimClaw Configuration
-[agent]
-name = "intimclaw"
-version = "0.1.0"
-model_provider = "{provider}"
-model = "{default_model}"
-persona = "superintim"
+    os.makedirs(paths["persona_dir"], exist_ok=True)
 
-[providers.{provider}]
+    config_path = paths["config_path"]
+
+    provider_type = "anthropic" if choice == "2" else "openai-compatible"
+
+    # Build providers array-of-tables matching Go struct
+    providers_toml = f"""
+[[providers]]
+name = "{provider}"
 type = "{provider_type}"
 base_url = "{api_url}"
 api_key = "{api_key}"
 models = ["{default_model}"]
 """
-    
-    # Add other providers for user manual setup references
-    if provider != "gemini":
-        config_content += """
-[providers.gemini]
-type = "openai-compatible"
-base_url = "https://generativelanguage.googleapis.com/v1beta"
+
+    # Add reference providers (no API key — user fills in later)
+    ref_providers = {
+        "gemini": ("openai-compatible", "https://generativelanguage.googleapis.com/v1beta", ["gemini-2.5-flash", "gemini-2.5-pro"]),
+        "anthropic": ("anthropic", "https://api.anthropic.com/v1", ["claude-3-5-sonnet-latest"]),
+        "openai": ("openai-compatible", "https://api.openai.com/v1", ["gpt-4o-mini", "gpt-4o"]),
+        "groq": ("openai-compatible", "https://api.groq.com/openai/v1", ["llama-3.3-70b-versatile"]),
+        "ollama": ("openai-compatible", "http://localhost:11434/v1", ["llama3.2", "codellama"]),
+    }
+
+    for name, (ptype, purl, pmodels) in ref_providers.items():
+        if name != provider:
+            models_str = ", ".join(f'"{m}"' for m in pmodels)
+            providers_toml += f"""
+[[providers]]
+name = "{name}"
+type = "{ptype}"
+base_url = "{purl}"
 api_key = ""
-models = ["gemini-2.5-flash", "gemini-2.5-pro"]
-"""
-    if provider != "anthropic":
-        config_content += """
-[providers.anthropic]
-type = "anthropic"
-base_url = "https://api.anthropic.com/v1"
-api_key = ""
-models = ["claude-3-5-sonnet-latest"]
-"""
-    if provider != "openai":
-        config_content += """
-[providers.openai]
-type = "openai-compatible"
-base_url = "https://api.openai.com/v1"
-api_key = ""
-models = ["gpt-4o-mini"]
-"""
-    if provider != "groq":
-        config_content += """
-[providers.groq]
-type = "openai-compatible"
-base_url = "https://api.groq.com/openai/v1"
-api_key = ""
-models = ["llama-3.3-70b-versatile"]
+models = [{models_str}]
 """
 
-    # Add other configuration blocks
-    config_content += f"""
+    config_content = f"""# config.toml — IntimClaw Configuration
+# Generated by setup wizard
+
+[agent]
+name = "intimclaw"
+version = "0.1.0"
+provider = "{provider}"
+model = "{default_model}"
+persona = "default"
+{providers_toml}
+[channels.telegram]
+enabled = false
+bot_token = ""
+owner_id = 0
+mention_only = false
+
+[channels.discord]
+enabled = false
+bot_token = ""
+
+[channels.webchat]
+enabled = true
+port = 18080
+host = "127.0.0.1"
+
+[mcp]
+enabled = false
+
 [skills]
 enabled = true
 directories = ["{paths["skills_dir"]}"]
@@ -201,49 +167,59 @@ directories = ["{paths["skills_dir"]}"]
 [memory]
 backend = "sqlite"
 semantic_search = true
+decay_days = 30
 
 [security]
 risk_profile = "default"
 sandbox = false
-excluded_tools = ["rm", "mkfs", "dd", "shutdown"]
-forbidden_paths = [".ssh", ".gnupg"]
+excluded_tools = ["rm", "mkfs", "dd", "shutdown", "poweroff"]
+forbidden_paths = [".ssh", ".gnupg", ".aws"]
+
+[webui]
+enabled = true
+port = 18080
+host = "127.0.0.1"
+theme = "intimclaw"
+
+[cron]
+enabled = true
+max_jobs = 50
 """
 
     with open(config_path, "w") as f:
         f.write(config_content)
-        
-    # Generate superintim/SOUL.md
-    soul_path = os.path.join(paths["soul_dir"], "SOUL.md")
+
+    # Generate persona/SOUL.md
+    soul_path = os.path.join(paths["persona_dir"], "SOUL.md")
     if not os.path.exists(soul_path):
-        soul_content = """# SOUL OF INTIMCLAW AGENTIC CODER
+        soul_content = """# SOUL OF INTIMCLAW
 
-Anda adalah **IntimClaw**, AI Agent coding mandiri yang tangguh dan efisien.
+You are **IntimClaw**, a capable and efficient AI Agent.
 
-## Gaya Berkomunikasi & Nada:
-- Gunakan bahasa Indonesia santai (casual lo/gue).
-- Nada bicara santai, cerdas, efisien, dan berorientasi pada eksekusi.
-- Berbicaralah seperti software engineer profesional yang asyik.
+## Communication Style:
+- Direct, technical, and efficient.
+- Match the operator's energy and language.
+- Lead with output. Theory after, only if needed.
 
-## Aturan Utama Eksekusi Coding:
-1. Anda bukan asisten teks biasa. Anda adalah Agent Mandiri yang bisa memodifikasi kode.
-2. Gunakan `list_dir` dan `file_read` untuk memahami codebase proyek sebelum melakukan perubahan.
-3. Selalu gunakan `file_write` atau `file_edit` untuk membuat perubahan kode secara langsung dan rapi.
-4. Setelah melakukan edit file, jalankan perintah pengujian menggunakan tool `exec` (misal `npm run build`, `python3 script.py`) untuk memverifikasi bahwa perubahan bekerja sempurna dan tidak menimbulkan error baru.
-5. Jika ada error, analisis log-nya, perbaiki langsung, dan jangan menyerah sebelum target tercapai.
+## Core Rules:
+1. You are an autonomous Agent, not a passive assistant.
+2. Use `list_dir` and `file_read` to understand the codebase before making changes.
+3. Use `file_write` or `file_edit` to make code changes directly.
+4. After editing, run verification commands (e.g. `npm run build`, `python3 script.py`).
+5. If errors occur, analyze logs, fix directly, and don't stop until the target is achieved.
 """
         with open(soul_path, "w") as f:
             f.write(soul_content)
 
     print("=======================================================")
-    print("🎉 SETUP SELESAI COK! Konfigurasi tersimpan di:")
+    print("SETUP COMPLETE! Configuration saved to:")
     print(f"   {config_path}")
     print("-------------------------------------------------------")
-    print("Mulai masuk ke IntimClaw...")
+    print("Starting IntimClaw...")
     print("=======================================================\n")
 
 if __name__ == "__main__":
     if not check_config():
         run_wizard()
     else:
-        # Config exists and valid
         pass
