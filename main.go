@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/xxayii/intimclaw/internal/agent"
 	"github.com/xxayii/intimclaw/internal/config"
@@ -169,6 +170,7 @@ func runAgent(args []string) {
 		}()
 
 		scanner := NewInputScanner()
+		spinner := NewBrandSpinner("intimclaw", 120*time.Millisecond)
 		for {
 			fmt.Printf("%s>%s ", colorCyan, colorReset)
 			input, err := scanner.Scan()
@@ -185,7 +187,9 @@ func runAgent(args []string) {
 				return
 			}
 
+			spinner.Start()
 			resp, err := a.Run(input)
+			spinner.Stop()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%serror: %v%s\n", colorRed, err, colorReset)
 				continue
