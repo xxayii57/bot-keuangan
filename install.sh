@@ -160,7 +160,7 @@ trap cleanup EXIT
 
 # --- UNDUH CHECKSUM ---
 echo -e "${YELLOW}Mengunduh SHA256SUMS...${NC}"
-HTTP_CODE=$(curl -s -o "$TEMP_SUM" -w "%{http_code}" "$CHECKSUM_URL" 2>/dev/null)
+HTTP_CODE=$(curl -sL -o "$TEMP_SUM" -w "%{http_code}" "$CHECKSUM_URL" 2>/dev/null)
 CURL_EXIT=$?
 
 if [ $CURL_EXIT -ne 0 ]; then
@@ -192,7 +192,7 @@ esac
 
 # --- UNDUH BINARY ---
 echo -e "${YELLOW}Mengunduh $BINARY_NAME...${NC}"
-HTTP_CODE=$(curl -s -o "$TEMP_BIN" -w "%{http_code}" "$DOWNLOAD_URL" 2>/dev/null)
+HTTP_CODE=$(curl -sL -o "$TEMP_BIN" -w "%{http_code}" "$DOWNLOAD_URL" 2>/dev/null)
 CURL_EXIT=$?
 
 if [ $CURL_EXIT -ne 0 ]; then
@@ -264,7 +264,7 @@ mkdir -p "$CONFIG_DIR/memory"
 
 # Download Python Wizard File dari Github
 REPO_RAW_URL="https://raw.githubusercontent.com/$GITHUB_REPO/main"
-HTTP_CODE=$(curl -s -o "$WIZARD_DEST" -w "%{http_code}" "$REPO_RAW_URL/intimclaw_wizard.py" 2>/dev/null)
+HTTP_CODE=$(curl -sL -o "$WIZARD_DEST" -w "%{http_code}" "$REPO_RAW_URL/intimclaw_wizard.py" 2>/dev/null)
 if [ "$HTTP_CODE" = "200" ]; then
     chmod +x "$WIZARD_DEST"
 else
@@ -355,7 +355,7 @@ if [ "$1" = "update" ]; then
     TEMP_SUM="$(mktemp)"
 
     echo "Mengunduh SHA256SUMS..."
-    HTTP_CODE=$(curl -s -o "$TEMP_SUM" -w "%{http_code}" "$CHECKSUM_URL" 2>/dev/null)
+    HTTP_CODE=$(curl -sL -o "$TEMP_SUM" -w "%{http_code}" "$CHECKSUM_URL" 2>/dev/null)
     if [ "$HTTP_CODE" != "200" ]; then
         echo "[Error] SHA256SUMS tidak tersedia (HTTP $HTTP_CODE)."
         rm -f "$TEMP_FILE" "$TEMP_SUM"
@@ -363,7 +363,7 @@ if [ "$1" = "update" ]; then
     fi
 
     echo "Mengunduh biner pembaruan..."
-    HTTP_CODE=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" "$DOWNLOAD_URL" 2>/dev/null)
+    HTTP_CODE=$(curl -sL -o "$TEMP_FILE" -w "%{http_code}" "$DOWNLOAD_URL" 2>/dev/null)
     if [ "$HTTP_CODE" != "200" ]; then
         echo "[Error] Binary '$BINARY_NAME' tidak ditemukan di rilis $TAG_NAME (HTTP $HTTP_CODE)."
         rm -f "$TEMP_FILE" "$TEMP_SUM"
@@ -392,7 +392,7 @@ if [ "$1" = "update" ]; then
     chmod +x "$FINAL_BINARY_PATH"
 
     # Update Python Wizard
-    curl -fsSL -o "$WIZARD_DEST" "$REPO_RAW_URL/intimclaw_wizard.py" 2>/dev/null
+    curl -fsSL -L -o "$WIZARD_DEST" "$REPO_RAW_URL/intimclaw_wizard.py" 2>/dev/null
     chmod +x "$WIZARD_DEST"
 
     echo "====================================================="
