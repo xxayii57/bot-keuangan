@@ -4,6 +4,8 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,10 +46,66 @@ func getMemoryDBPath() string {
 	return config.GetMemoryPath()
 }
 
+// generateAPIToken creates a cryptographically random hex token.
+func generateAPIToken() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: shouldn't fail on any sane OS
+		panic(fmt.Sprintf("crypto/rand failed: %v", err))
+	}
+	return hex.EncodeToString(b)
+}
+
+// requireAuth wraps an http.HandlerFunc, requiring a valid API token.
+// Token is checked via Authorization: Bearer <token> header or ?token= query param.
+func requireAuth(token string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Check Authorization header
+		if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				if strings.TrimPrefix(authHeader, "Bearer ") == token {
+					next(w, r)
+					return
+				}
+			}
+		}
+		// Check query parameter
+		if r.URL.Query().Get("token") == token {
+			next(w, r)
+			return
+		}
+		jsonError(w, "Unauthorized: valid API token required", 401)
+	}
+}
+
+// maskSecret returns a masked version of a secret string.
+// e.g. "sk-abc123xyz" → "sk-***xyz"
+func maskSecret(s string) string {
+	if s == "" {
+		return ""
+	}
+	if len(s) <= 8 {
+		return "***"
+	}
+	return s[:4] + "***" + s[len(s)-4:]
+}
+
 func startWebUI(port int, host string) {
 	cfg, _ = config.Load()
 	startTime = time.Now()
 	webuiDir := getWebUIDir()
+
+	// Generate API token if not set
+	if cfg.WebUI.APIToken == "" {
+		cfg.WebUI.APIToken = generateAPIToken()
+		config.Save(cfg)
+		// Write token to file for client discovery
+		tokenPath := filepath.Join(filepath.Dir(config.GetConfigPath()), "webui.token")
+		os.WriteFile(tokenPath, []byte(cfg.WebUI.APIToken), 0600)
+		fmt.Printf("[intimclaw] Generated API token: %s\n", cfg.WebUI.APIToken)
+		fmt.Printf("[intimclaw] Token saved to: %s\n", tokenPath)
+	}
+	token := cfg.WebUI.APIToken
 
 	// Start Telegram bot if enabled
 	if cfg.Channels.Telegram.Enabled && cfg.Channels.Telegram.BotToken != "" {
@@ -69,52 +127,53 @@ func startWebUI(port int, host string) {
 		http.ServeFile(w, r, filepath.Join(webuiDir, "index.html"))
 	})
 
-	// Core
-	http.HandleFunc("/api/chat", handleChat)
-	http.HandleFunc("/ws/chat", handleWSChat)
+	// Core — /api/health is public, all others require auth
 	http.HandleFunc("/api/health", handleHealth)
-	http.HandleFunc("/api/dashboard", handleDashboard)
+	http.HandleFunc("/api/chat", requireAuth(token, handleChat))
+	http.HandleFunc("/ws/chat", requireAuth(token, handleWSChat))
+	http.HandleFunc("/api/dashboard", requireAuth(token, handleDashboard))
 
 	// Config
-	http.HandleFunc("/api/settings", handleSettings)
-	http.HandleFunc("/api/settings/save", handleSettingsSave)
-	http.HandleFunc("/api/settings/raw", handleSettingsRaw)
-	http.HandleFunc("/api/settings/raw/save", handleSettingsRawSave)
-	http.HandleFunc("/api/settings/default", handleSettingsDefault)
+	http.HandleFunc("/api/settings", requireAuth(token, handleSettings))
+	http.HandleFunc("/api/settings/save", requireAuth(token, handleSettingsSave))
+	http.HandleFunc("/api/settings/raw", requireAuth(token, handleSettingsRaw))
+	http.HandleFunc("/api/settings/raw/save", requireAuth(token, handleSettingsRawSave))
+	http.HandleFunc("/api/settings/default", requireAuth(token, handleSettingsDefault))
 
 	// Providers
-	http.HandleFunc("/api/providers", handleProviders)
-	http.HandleFunc("/api/providers/test", handleProviderTest)
+	http.HandleFunc("/api/providers", requireAuth(token, handleProviders))
+	http.HandleFunc("/api/providers/test", requireAuth(token, handleProviderTest))
 
 	// Channels
-	http.HandleFunc("/api/channels", handleChannels)
-	http.HandleFunc("/api/channels/toggle", handleChannelToggle)
-	http.HandleFunc("/api/channels/save", handleChannelSave)
+	http.HandleFunc("/api/channels", requireAuth(token, handleChannels))
+	http.HandleFunc("/api/channels/toggle", requireAuth(token, handleChannelToggle))
+	http.HandleFunc("/api/channels/save", requireAuth(token, handleChannelSave))
 
 	// Skills
-	http.HandleFunc("/api/skills", handleSkills)
-	http.HandleFunc("/api/skills/toggle", handleSkillToggle)
+	http.HandleFunc("/api/skills", requireAuth(token, handleSkills))
+	http.HandleFunc("/api/skills/toggle", requireAuth(token, handleSkillToggle))
 
 	// Memory
-	http.HandleFunc("/api/memory", handleMemory)
-	http.HandleFunc("/api/memory/delete", handleMemoryDelete)
-	http.HandleFunc("/api/memory/add", handleMemoryAdd)
-	http.HandleFunc("/api/memory/toggle-pin", handleMemoryTogglePin)
-	http.HandleFunc("/api/learning", handleLearning)
+	http.HandleFunc("/api/memory", requireAuth(token, handleMemory))
+	http.HandleFunc("/api/memory/delete", requireAuth(token, handleMemoryDelete))
+	http.HandleFunc("/api/memory/add", requireAuth(token, handleMemoryAdd))
+	http.HandleFunc("/api/memory/toggle-pin", requireAuth(token, handleMemoryTogglePin))
+	http.HandleFunc("/api/learning", requireAuth(token, handleLearning))
 
 	// MCP
-	http.HandleFunc("/api/mcp", handleMCP)
-	http.HandleFunc("/api/mcp/add", handleMCPAdd)
-	http.HandleFunc("/api/mcp/remove", handleMCPRemove)
+	http.HandleFunc("/api/mcp", requireAuth(token, handleMCP))
+	http.HandleFunc("/api/mcp/add", requireAuth(token, handleMCPAdd))
+	http.HandleFunc("/api/mcp/remove", requireAuth(token, handleMCPRemove))
 
 	// Sessions
-	http.HandleFunc("/api/sessions", handleSessions)
-	http.HandleFunc("/api/sessions/", handleSessionMessages)
+	http.HandleFunc("/api/sessions", requireAuth(token, handleSessions))
+	http.HandleFunc("/api/sessions/", requireAuth(token, handleSessionMessages))
 
 	// Logs
-	http.HandleFunc("/api/logs", handleLogs)
+	http.HandleFunc("/api/logs", requireAuth(token, handleLogs))
 
 	fmt.Printf("[intimclaw] intimclaw.ic WebUI: http://%s:%d\n", host, port)
+	fmt.Printf("[intimclaw] API token required for all /api/* endpoints (except /api/health)\n")
 	if err := http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil); err != nil {
 		fmt.Fprintf(os.Stderr, "[intimclaw] web error: %v\n", err)
 	}
@@ -211,7 +270,27 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		// Allow same-origin connections and localhost
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // Non-browser clients (curl, etc.)
+		}
+		// Allow localhost origins
+		if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
+			return true
+		}
+		// Allow the configured host
+		if cfg != nil && cfg.WebUI.Host != "" && cfg.WebUI.Host != "0.0.0.0" {
+			allowed := fmt.Sprintf("http://%s:%d", cfg.WebUI.Host, cfg.WebUI.Port)
+			if origin == allowed || origin == "https://"+strings.TrimPrefix(allowed, "http://") {
+				return true
+			}
+		}
+		// If bound to 0.0.0.0, allow all (user explicitly chose public mode)
+		if cfg != nil && cfg.WebUI.Host == "0.0.0.0" {
+			return true
+		}
+		return false
 	},
 }
 
@@ -279,8 +358,20 @@ func handleWSChat(w http.ResponseWriter, r *http.Request) {
 // Settings
 // ═══════════════════════════════════════════════════════════════
 func handleSettings(w http.ResponseWriter, r *http.Request) {
+	// Create a masked copy of the config to avoid leaking secrets
+	masked := *cfg
+	masked.Providers = make([]config.ProviderConfig, len(cfg.Providers))
+	for i, p := range cfg.Providers {
+		masked.Providers[i] = p
+		masked.Providers[i].APIKey = maskSecret(p.APIKey)
+	}
+	masked.Channels.Telegram.BotToken = maskSecret(cfg.Channels.Telegram.BotToken)
+	masked.Channels.Discord.BotToken = maskSecret(cfg.Channels.Discord.BotToken)
+	masked.Channels.Email.ImapPass = maskSecret(cfg.Channels.Email.ImapPass)
+	masked.WebUI.APIToken = maskSecret(cfg.WebUI.APIToken)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(cfg)
+	json.NewEncoder(w).Encode(&masked)
 }
 
 func handleSettingsSave(w http.ResponseWriter, r *http.Request) {
@@ -294,7 +385,33 @@ func handleSettingsSave(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "Invalid config", 400)
 		return
 	}
-	// Save to TOML
+
+	// Preserve API token — never allow it to be cleared via this endpoint
+	if newCfg.WebUI.APIToken == "" || strings.Contains(newCfg.WebUI.APIToken, "***") {
+		newCfg.WebUI.APIToken = cfg.WebUI.APIToken
+	}
+
+	// Preserve provider API keys if masked
+	for i, p := range newCfg.Providers {
+		if strings.Contains(p.APIKey, "***") && i < len(cfg.Providers) {
+			// Find matching provider by name and restore real key
+			for _, orig := range cfg.Providers {
+				if orig.Name == p.Name {
+					newCfg.Providers[i].APIKey = orig.APIKey
+					break
+				}
+			}
+		}
+	}
+
+	// Preserve channel tokens if masked
+	if strings.Contains(newCfg.Channels.Telegram.BotToken, "***") {
+		newCfg.Channels.Telegram.BotToken = cfg.Channels.Telegram.BotToken
+	}
+	if strings.Contains(newCfg.Channels.Discord.BotToken, "***") {
+		newCfg.Channels.Discord.BotToken = cfg.Channels.Discord.BotToken
+	}
+
 	cfg = &newCfg
 	if err := config.Save(cfg); err != nil {
 		jsonError(w, "Failed to save settings: "+err.Error(), 500)
@@ -325,11 +442,26 @@ func handleSettingsRawSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate that the body is valid TOML before writing
+	var testCfg config.Config
+	if err := toml.Unmarshal(body, &testCfg); err != nil {
+		jsonError(w, "Invalid TOML: "+err.Error(), 400)
+		return
+	}
+
+	// Reject if API token would be overwritten to empty
+	if testCfg.WebUI.APIToken == "" && cfg.WebUI.APIToken != "" {
+		testCfg.WebUI.APIToken = cfg.WebUI.APIToken
+	}
+
 	path := config.GetConfigPath()
 	if err := os.WriteFile(path, body, 0644); err != nil {
 		jsonError(w, "Failed to save raw config: "+err.Error(), 500)
 		return
 	}
+
+	// Update in-memory config
+	cfg = &testCfg
 
 	go func() {
 		time.Sleep(1 * time.Second)
@@ -386,8 +518,25 @@ func handleProviders(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, "Invalid provider data", 400)
 			return
 		}
+		// Reject masked API keys
+		if strings.Contains(newProv.APIKey, "***") {
+			jsonError(w, "API key appears to be masked. Send the real key.", 400)
+			return
+		}
+		// Validate base URL is not empty for non-ollama providers
+		if newProv.BaseURL == "" && newProv.Type != "ollama" {
+			jsonError(w, "base_url is required", 400)
+			return
+		}
 		if newProv.Type == "" {
 			newProv.Type = "openai-compatible"
+		}
+		// Prevent duplicate provider names
+		for _, p := range cfg.Providers {
+			if p.Name == newProv.Name {
+				jsonError(w, "Provider '"+newProv.Name+"' already exists. Use a different name.", 400)
+				return
+			}
 		}
 		cfg.Providers = append(cfg.Providers, config.ProviderConfig{
 			Name:    newProv.Name,
@@ -475,7 +624,7 @@ func handleChannels(w http.ResponseWriter, r *http.Request) {
 			"enabled":      cfg.Channels.Telegram.Enabled,
 			"type":         "long-polling",
 			"desc":         "Inline keyboard approval · vision support",
-			"bot_token":    cfg.Channels.Telegram.BotToken,
+			"bot_token":    maskSecret(cfg.Channels.Telegram.BotToken),
 			"owner_id":     cfg.Channels.Telegram.OwnerID,
 			"mention_only": cfg.Channels.Telegram.MentionOnly,
 		},
@@ -484,7 +633,7 @@ func handleChannels(w http.ResponseWriter, r *http.Request) {
 			"enabled":   cfg.Channels.Discord.Enabled,
 			"type":      "websocket",
 			"desc":      "WebSocket gateway · slash commands",
-			"bot_token": cfg.Channels.Discord.BotToken,
+			"bot_token": maskSecret(cfg.Channels.Discord.BotToken),
 		},
 		{
 			"name":    "WhatsApp",
@@ -543,15 +692,25 @@ func handleChannelSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Reject masked secrets — client must send the real value or omit the field
+	if strings.Contains(req.BotToken, "***") {
+		jsonError(w, "Bot token appears to be masked. Send the real token or omit the field.", 400)
+		return
+	}
+
 	switch req.Name {
 	case "Telegram":
 		cfg.Channels.Telegram.Enabled = req.Enabled
-		cfg.Channels.Telegram.BotToken = req.BotToken
+		if req.BotToken != "" {
+			cfg.Channels.Telegram.BotToken = req.BotToken
+		}
 		cfg.Channels.Telegram.OwnerID = req.OwnerID
 		cfg.Channels.Telegram.MentionOnly = req.MentionOnly
 	case "Discord":
 		cfg.Channels.Discord.Enabled = req.Enabled
-		cfg.Channels.Discord.BotToken = req.BotToken
+		if req.BotToken != "" {
+			cfg.Channels.Discord.BotToken = req.BotToken
+		}
 	case "WebChat":
 		cfg.Channels.WebChat.Enabled = req.Enabled
 		if req.Port > 0 {

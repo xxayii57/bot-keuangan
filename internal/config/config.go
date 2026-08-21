@@ -107,10 +107,11 @@ type SecurityConfig struct {
 }
 
 type WebUIConfig struct {
-	Enabled bool   `toml:"enabled"`
-	Port    int    `toml:"port"`
-	Host    string `toml:"host"`
-	Theme   string `toml:"theme"`
+	Enabled  bool   `toml:"enabled"`
+	Port     int    `toml:"port"`
+	Host     string `toml:"host"`
+	Theme    string `toml:"theme"`
+	APIToken string `toml:"api_token,omitempty"`
 }
 
 type CronConfig struct {
