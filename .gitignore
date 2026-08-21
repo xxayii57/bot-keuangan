@@ -78,3 +78,6 @@ desktop.ini
 *~
 .idea/
 .vscode/
+
+# ===== CHAT LOGS / TRANSCRIPTS (berisi kredensial infra) =====
+/undangan-intim/chat_log.jsonl
