@@ -47,16 +47,54 @@ $GITHUB_REPO = "xxayii57/bot-keuangan"
 $LatestReleaseUrl = "https://api.github.com/repos/$GITHUB_REPO/releases/latest"
 
 Write-Host "Menghubungi API GitHub untuk mencari rilis terbaru..." -ForegroundColor Yellow
+
 try {
-    $ReleaseJson = Invoke-RestMethod -Uri $LatestReleaseUrl -UseBasicParsing
+    $Response = Invoke-WebRequest -Uri $LatestReleaseUrl -UseBasicParsing -ErrorAction Stop
+    $StatusCode = $Response.StatusCode
+    $ReleaseJson = $Response.Content | ConvertFrom-Json
     $TagName = $ReleaseJson.tag_name
 } catch {
-    Write-Error "Gagal menghubungi API GitHub. Periksa koneksi internet Anda."
+    $StatusCode = $_.Exception.Response.StatusCode.value__
+    if ($null -eq $StatusCode) { $StatusCode = 0 }
+
+    switch ($StatusCode) {
+        404 {
+            Write-Host ""
+            Write-Host "No published IntimClaw release found for this repository yet." -ForegroundColor Red
+            Write-Host "  Repository: $GITHUB_REPO" -ForegroundColor Yellow
+            Write-Host "  Belum ada release yang dipublikasikan." -ForegroundColor Yellow
+            Write-Host "  Hubungi pengembang untuk membuat rilis baru di GitHub:" -ForegroundColor Yellow
+            Write-Host "    https://github.com/$GITHUB_REPO/releases/new" -ForegroundColor Yellow
+        }
+        403 {
+            Write-Host ""
+            Write-Host "GitHub API rate limit exceeded (HTTP 403)." -ForegroundColor Red
+            Write-Host "  Tunggu beberapa menit atau login ke GitHub untuk meningkatkan limit." -ForegroundColor Yellow
+        }
+        429 {
+            Write-Host ""
+            Write-Host "GitHub API rate limit exceeded (HTTP 429)." -ForegroundColor Red
+            Write-Host "  Tunggu beberapa menit sebelum mencoba lagi." -ForegroundColor Yellow
+        }
+        0 {
+            Write-Host ""
+            Write-Host "Gagal menghubungi API GitHub (network error)." -ForegroundColor Red
+            Write-Host "  Periksa koneksi internet Anda." -ForegroundColor Yellow
+        }
+        default {
+            Write-Host ""
+            Write-Host "GitHub API returned HTTP $StatusCode." -ForegroundColor Red
+        }
+    }
     Exit 1
 }
 
 if ([string]::IsNullOrEmpty($TagName)) {
-    Write-Error "Belum ada binary rilis IntimClaw di repositori ini."
+    Write-Host ""
+    Write-Host "No published IntimClaw release found for this repository yet." -ForegroundColor Red
+    Write-Host "  Response dari GitHub tidak berisi tag release yang valid." -ForegroundColor Yellow
+    Write-Host "  Repository: $GITHUB_REPO" -ForegroundColor Yellow
+    Write-Host "  Hubungi pengembang untuk membuat rilis baru." -ForegroundColor Yellow
     Exit 1
 }
 
@@ -72,9 +110,27 @@ $TempSum = Join-Path $env:TEMP "intimclaw_sha256.txt"
 # Unduh checksum
 Write-Host "Mengunduh SHA256SUMS..." -ForegroundColor Yellow
 try {
-    Invoke-WebRequest -Uri $ChecksumUrl -OutFile $TempSum -UseBasicParsing
+    $SumResponse = Invoke-WebRequest -Uri $ChecksumUrl -OutFile $TempSum -UseBasicParsing -ErrorAction Stop
 } catch {
-    Write-Error "Gagal mengunduh berkas SHA256SUMS dari rilis."
+    $StatusCode = $_.Exception.Response.StatusCode.value__
+    if ($null -eq $StatusCode) { $StatusCode = 0 }
+
+    switch ($StatusCode) {
+        404 {
+            Write-Host "SHA256SUMS tidak ditemukan di rilis (HTTP 404)." -ForegroundColor Red
+            Write-Host "  Rilis $TagName tidak memiliki berkas SHA256SUMS." -ForegroundColor Yellow
+        }
+        403 {
+            Write-Host "GitHub rate limit saat mengunduh SHA256SUMS (HTTP 403)." -ForegroundColor Red
+            Write-Host "  Tunggu beberapa menit atau login ke GitHub." -ForegroundColor Yellow
+        }
+        0 {
+            Write-Host "Gagal mengunduh SHA256SUMS (network error)." -ForegroundColor Red
+        }
+        default {
+            Write-Host "Gagal mengunduh SHA256SUMS (HTTP $StatusCode)." -ForegroundColor Red
+        }
+    }
     Remove-Item $TempExe, $TempSum -Force -ErrorAction SilentlyContinue
     Exit 1
 }
@@ -91,7 +147,11 @@ foreach ($Line in $Lines) {
 }
 
 if ([string]::IsNullOrEmpty($TargetChecksum)) {
-    Write-Error "Checksum untuk biner '$BinaryName' tidak ditemukan di berkas SHA256SUMS."
+    Write-Host "Checksum untuk biner '$BinaryName' tidak ditemukan di SHA256SUMS." -ForegroundColor Red
+    Write-Host "  Isi SHA256SUMS:" -ForegroundColor Yellow
+    Get-Content $TempSum | Select-Object -First 5 | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+    Write-Host "  Biner yang dicari: $BinaryName" -ForegroundColor Yellow
+    Write-Host "  Kemungkinan rilis belum menyertakan checksum untuk platform ini." -ForegroundColor Yellow
     Remove-Item $TempExe, $TempSum -Force -ErrorAction SilentlyContinue
     Exit 1
 }
@@ -99,9 +159,30 @@ if ([string]::IsNullOrEmpty($TargetChecksum)) {
 # Unduh biner
 Write-Host "Mengunduh biner $BinaryName..." -ForegroundColor Yellow
 try {
-    Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempExe -UseBasicParsing
+    $BinResponse = Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempExe -UseBasicParsing -ErrorAction Stop
 } catch {
-    Write-Error "Gagal mengunduh biner '$BinaryName' dari rilis GitHub."
+    $StatusCode = $_.Exception.Response.StatusCode.value__
+    if ($null -eq $StatusCode) { $StatusCode = 0 }
+
+    switch ($StatusCode) {
+        404 {
+            Write-Host "Binary '$BinaryName' tidak ditemukan di rilis $TagName (HTTP 404)." -ForegroundColor Red
+            Write-Host "  Rilis tersedia tapi tidak menyediakan biner untuk platform ini." -ForegroundColor Yellow
+            Write-Host "  Platform: Windows $($Arch)" -ForegroundColor Yellow
+            Write-Host "  Nama biner yang dicari: $BinaryName" -ForegroundColor Yellow
+            Write-Host "  Hubungi pengembang untuk menambahkan build untuk platform ini." -ForegroundColor Yellow
+        }
+        403 {
+            Write-Host "GitHub rate limit saat mengunduh biner (HTTP 403)." -ForegroundColor Red
+            Write-Host "  Tunggu beberapa menit atau login ke GitHub." -ForegroundColor Yellow
+        }
+        0 {
+            Write-Host "Gagal mengunduh biner (network error)." -ForegroundColor Red
+        }
+        default {
+            Write-Host "Gagal mengunduh biner (HTTP $StatusCode)." -ForegroundColor Red
+        }
+    }
     Remove-Item $TempExe, $TempSum -Force -ErrorAction SilentlyContinue
     Exit 1
 }
@@ -111,14 +192,14 @@ Write-Host "Memverifikasi integritas berkas (SHA256 Checksum)..." -ForegroundCol
 $FileHash = (Get-FileHash -Path $TempExe -Algorithm SHA256).Hash.ToLower()
 
 if ($FileHash -ne $TargetChecksum.ToLower()) {
-    Write-Error "Checksum SHA256 tidak cocok! Unduhan rusak atau berkas tidak aman."
-    Write-Host "Diharapkan: $TargetChecksum" -ForegroundColor Red
-    Write-Host "Ditemukan:  $FileHash" -ForegroundColor Red
+    Write-Host "Checksum SHA256 TIDAK COCOK — file mungkin rusak atau terinfeksi." -ForegroundColor Red
+    Write-Host "  Diharapkan: $TargetChecksum" -ForegroundColor Red
+    Write-Host "  Ditemukan:  $FileHash" -ForegroundColor Red
     Remove-Item $TempExe, $TempSum -Force -ErrorAction SilentlyContinue
     Exit 1
 }
 
-Write-Host "✓ Verifikasi checksum berhasil. Berkas biner aman!" -ForegroundColor Green
+Write-Host "Verifikasi checksum berhasil. Berkas biner aman!" -ForegroundColor Green
 
 # --- INSTALASI BINER ---
 $FinalBinaryPath = Join-Path $UserLocalBin "intimclaw.exe"
@@ -132,9 +213,9 @@ if ($UserPath -notlike "*$UserLocalBin*") {
     $NewUserPath = "$UserPath;$UserLocalBin"
     [Environment]::SetEnvironmentVariable("PATH", $NewUserPath, "User")
     $env:Path = "$env:Path;$UserLocalBin"
-    Write-Host "✓ Direktori $UserLocalBin ditambahkan ke PATH." -ForegroundColor Green
+    Write-Host "Direktori $UserLocalBin ditambahkan ke PATH." -ForegroundColor Green
 } else {
-    Write-Host "✓ Direktori $UserLocalBin sudah terdaftar di PATH." -ForegroundColor Green
+    Write-Host "Direktori $UserLocalBin sudah terdaftar di PATH." -ForegroundColor Green
 }
 
 # --- MEMBUAT CONFIG & SOUL FILE ---
@@ -247,6 +328,6 @@ Anda adalah **IntimClaw**, AI Agent coding mandiri yang tangguh dan efisien.
 }
 
 Write-Host "=====================================================" -ForegroundColor Green
-Write-Host "       INTIMCLAW CLI BERHASIL DIINSTAL COK!          " -ForegroundColor Green
+Write-Host "       INTIMCLAW CLI BERHASIL DIINSTAL!              " -ForegroundColor Green
 Write-Host "=====================================================" -ForegroundColor Blue
 Write-Host "Buka PowerShell baru dan ketik 'intimclaw' untuk memulai setup!" -ForegroundColor Yellow
