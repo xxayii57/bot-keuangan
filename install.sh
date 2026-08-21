@@ -82,13 +82,27 @@ fi
 mkdir -p "$INSTALL_DIR"
 
 # --- UNDUH & VERIFIKASI CHECKSUM ---
-REPO_RAW_URL="https://raw.githubusercontent.com/xxayii57/bot-keuangan/main"
-DOWNLOAD_URL="$REPO_RAW_URL/releases/$BINARY_NAME"
-CHECKSUM_URL="$REPO_RAW_URL/docs/release/sha256.txt"
+LATEST_RELEASE_URL="https://api.github.com/repos/xxayii57/bot-keuangan/releases/latest"
+TAG_NAME=$(curl -fsSL "$LATEST_RELEASE_URL" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"tag_name":\s*"(.*)".*/\1/')
+
+if [ -z "$TAG_NAME" ]; then
+    echo -e "${YELLOW}GitHub Release tidak dapat diakses (Private Repo / Belum ada Release). Menggunakan fallback server intimpos...${NC}"
+    DOWNLOAD_URL="http://intimpos.xxayii.my.id/downloads/$BINARY_NAME"
+    CHECKSUM_URL="http://intimpos.xxayii.my.id/downloads/sha256.txt"
+else
+    echo -e "${GREEN}Menemukan Rilis Terbaru di GitHub: $TAG_NAME${NC}"
+    DOWNLOAD_URL="https://github.com/xxayii57/bot-keuangan/releases/download/$TAG_NAME/$BINARY_NAME"
+    CHECKSUM_URL="https://github.com/xxayii57/bot-keuangan/releases/download/$TAG_NAME/sha256.txt"
+fi
+
 TEMP_FILE="$(mktemp)"
 
 echo -e "${YELLOW}Mengunduh berkas checksum...${NC}"
-CHECKSUMS_DATA=$(curl -fsSL "$CHECKSUM_URL")
+if ! CHECKSUMS_DATA=$(curl -fsSL "$CHECKSUM_URL"); then
+    echo -e "${RED}[Error] Gagal mengunduh berkas checksum dari $CHECKSUM_URL.${NC}"
+    rm -f "$TEMP_FILE"
+    exit 1
+fi
 TARGET_CHECKSUM=$(echo "$CHECKSUMS_DATA" | grep "$BINARY_NAME" | awk '{print $1}')
 
 if [ -z "$TARGET_CHECKSUM" ]; then
@@ -98,10 +112,14 @@ if [ -z "$TARGET_CHECKSUM" ]; then
 fi
 
 echo -e "${YELLOW}Mengunduh biner $BINARY_NAME dari sumber aman...${NC}"
-# Note: Fallback download ke file lokal Termux jika url utama github releases belum diupload secara riil
 if ! curl -fsSL -o "$TEMP_FILE" "$DOWNLOAD_URL"; then
     echo -e "${YELLOW}Mencoba fallback lokal dari repo assets...${NC}"
-    curl -fsSL -o "$TEMP_FILE" "$REPO_RAW_URL/intimclaw-android-project/app/src/main/assets/intimclaw-android"
+    REPO_RAW_URL="https://raw.githubusercontent.com/xxayii57/bot-keuangan/main"
+    if ! curl -fsSL -o "$TEMP_FILE" "$REPO_RAW_URL/intimclaw-android-project/app/src/main/assets/intimclaw-android"; then
+        echo -e "${RED}[Error] Gagal mengunduh biner dari semua sumber rilis.${NC}"
+        rm -f "$TEMP_FILE"
+        exit 1
+    fi
 fi
 
 # Verifikasi Checksum SHA256
