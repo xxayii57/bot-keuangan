@@ -43,8 +43,8 @@ GOOS=android GOARCH=arm64 go build -ldflags="-s -w" -o releases/intimclaw-androi
 # --- GENERATE CHECKSUM SHA256 ---
 echo -e "${YELLOW}Menghitung Checksum SHA256 untuk seluruh rilis...${NC}"
 cd releases
-sha256sum * > sha256.txt
-cat sha256.txt
+sha256sum intimclaw-* > SHA256SUMS
+cat SHA256SUMS
 cd ..
 
 echo -e "${GREEN}=====================================================${NC}"

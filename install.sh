@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # =================================================================
-# INTIMCLAW UNIVERSAL BOOTSTRAP INSTALLER
+# INTIMCLAW UNIVERSAL BOOTSTRAP INSTALLER (PRODUCTION READY)
 # =================================================================
 set -e
 
@@ -46,7 +46,7 @@ if grep -qE "(Microsoft|WSL)" /proc/version 2>/dev/null; then
     IS_WSL=true
 fi
 
-# Menentukan Target Biner
+# Menentukan Target Biner & Direktori Instalasi
 BINARY_NAME=""
 INSTALL_DIR=""
 
@@ -81,79 +81,90 @@ fi
 # Buat direktori instalasi jika belum ada
 mkdir -p "$INSTALL_DIR"
 
-# --- UNDUH & VERIFIKASI CHECKSUM ---
-LATEST_RELEASE_URL="https://api.github.com/repos/xxayii57/bot-keuangan/releases/latest"
-TAG_NAME=$(curl -fsSL "$LATEST_RELEASE_URL" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"tag_name":\s*"(.*)".*/\1/')
+# --- DETEKSI GITHUB RELEASE TERBARU ---
+GITHUB_REPO="xxayii57/bot-keuangan"
+LATEST_RELEASE_URL="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+
+echo -e "${YELLOW}Menghubungi API GitHub untuk mencari rilis terbaru...${NC}"
+RELEASE_JSON=$(curl -fsSL "$LATEST_RELEASE_URL" 2>/dev/null || true)
+
+if [ -z "$RELEASE_JSON" ]; then
+    echo -e "${RED}[Error] Gagal menghubungi API GitHub. Periksa koneksi internet Anda.${NC}"
+    exit 1
+fi
+
+# Parse tag_name dari JSON
+TAG_NAME=$(echo "$RELEASE_JSON" | grep '"tag_name":' | sed -E 's/.*"tag_name":\s*"(.*)".*/\1/')
 
 if [ -z "$TAG_NAME" ]; then
-    echo -e "${YELLOW}GitHub Release tidak dapat diakses (Private Repo / Belum ada Release). Menggunakan fallback server intimpos...${NC}"
-    DOWNLOAD_URL="http://intimpos.xxayii.my.id/downloads/$BINARY_NAME"
-    CHECKSUM_URL="http://intimpos.xxayii.my.id/downloads/sha256.txt"
-else
-    echo -e "${GREEN}Menemukan Rilis Terbaru di GitHub: $TAG_NAME${NC}"
-    DOWNLOAD_URL="https://github.com/xxayii57/bot-keuangan/releases/download/$TAG_NAME/$BINARY_NAME"
-    CHECKSUM_URL="https://github.com/xxayii57/bot-keuangan/releases/download/$TAG_NAME/sha256.txt"
-fi
-
-TEMP_FILE="$(mktemp)"
-
-echo -e "${YELLOW}Mengunduh berkas checksum...${NC}"
-if ! CHECKSUMS_DATA=$(curl -fsSL "$CHECKSUM_URL"); then
-    echo -e "${RED}[Error] Gagal mengunduh berkas checksum dari $CHECKSUM_URL.${NC}"
-    rm -f "$TEMP_FILE"
+    echo -e "${RED}[Error] Belum ada binary rilis IntimClaw di repositori ini.${NC}"
+    echo -e "${RED}Hubungi pengembang untuk membuat rilis baru di GitHub.${NC}"
     exit 1
 fi
-TARGET_CHECKSUM=$(echo "$CHECKSUMS_DATA" | grep "$BINARY_NAME" | awk '{print $1}')
+
+echo -e "${GREEN}Menemukan Rilis Terbaru: $TAG_NAME${NC}"
+
+# URL Aset Rilis GitHub
+DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/$TAG_NAME/$BINARY_NAME"
+CHECKSUM_URL="https://github.com/$GITHUB_REPO/releases/download/$TAG_NAME/SHA256SUMS"
+
+TEMP_BIN="$(mktemp)"
+TEMP_SUM="$(mktemp)"
+
+# --- UNDUH CHECKSUM & BINARY ---
+echo -e "${YELLOW}Mengunduh SHA256SUMS...${NC}"
+if ! curl -fsSL -o "$TEMP_SUM" "$CHECKSUM_URL"; then
+    echo -e "${RED}[Error] Gagal mengunduh berkas SHA256SUMS dari rilis.${NC}"
+    rm -f "$TEMP_BIN" "$TEMP_SUM"
+    exit 1
+fi
+
+echo -e "${YELLOW}Mengunduh $BINARY_NAME...${NC}"
+if ! curl -fsSL -o "$TEMP_BIN" "$DOWNLOAD_URL"; then
+    echo -e "${RED}[Error] Berkas biner '$BINARY_NAME' tidak ditemukan di rilis GitHub.${NC}"
+    rm -f "$TEMP_BIN" "$TEMP_SUM"
+    exit 1
+fi
+
+# --- VERIFIKASI CHECKSUM ---
+echo -e "${YELLOW}Memverifikasi SHA256 Checksum...${NC}"
+TARGET_CHECKSUM=$(grep "$BINARY_NAME" "$TEMP_SUM" | awk '{print $1}')
 
 if [ -z "$TARGET_CHECKSUM" ]; then
-    echo -e "${RED}[Error] Checksum untuk biner '$BINARY_NAME' tidak ditemukan di database rilis.${NC}"
-    rm -f "$TEMP_FILE"
+    echo -e "${RED}[Error] Checksum untuk biner '$BINARY_NAME' tidak ditemukan di berkas SHA256SUMS.${NC}"
+    rm -f "$TEMP_BIN" "$TEMP_SUM"
     exit 1
 fi
 
-echo -e "${YELLOW}Mengunduh biner $BINARY_NAME dari sumber aman...${NC}"
-if ! curl -fsSL -o "$TEMP_FILE" "$DOWNLOAD_URL"; then
-    echo -e "${YELLOW}Mencoba fallback lokal dari repo assets...${NC}"
-    REPO_RAW_URL="https://raw.githubusercontent.com/xxayii57/bot-keuangan/main"
-    if ! curl -fsSL -o "$TEMP_FILE" "$REPO_RAW_URL/intimclaw-android-project/app/src/main/assets/intimclaw-android"; then
-        echo -e "${RED}[Error] Gagal mengunduh biner dari semua sumber rilis.${NC}"
-        rm -f "$TEMP_FILE"
-        exit 1
-    fi
-fi
-
-# Verifikasi Checksum SHA256
-echo -e "${YELLOW}Memverifikasi integritas berkas (SHA256 Checksum)...${NC}"
 VERIFIED=false
-
 if command -v sha256sum >/dev/null 2>&1; then
-    if echo "$TARGET_CHECKSUM  $TEMP_FILE" | sha256sum -c - >/dev/null 2>&1; then
+    if echo "$TARGET_CHECKSUM  $TEMP_BIN" | sha256sum -c - >/dev/null 2>&1; then
         VERIFIED=true
     fi
 elif command -v shasum >/dev/null 2>&1; then
-    if echo "$TARGET_CHECKSUM  $TEMP_FILE" | shasum -a 256 -c - >/dev/null 2>&1; then
+    if echo "$TARGET_CHECKSUM  $TEMP_BIN" | shasum -a 256 -c - >/dev/null 2>&1; then
         VERIFIED=true
     fi
 else
-    # Fallback to python3 hash verification
-    if python3 -c "import hashlib, sys; f=open('$TEMP_FILE','rb').read(); h=hashlib.sha256(f).hexdigest(); sys.exit(0 if h == '$TARGET_CHECKSUM' else 1)" >/dev/null 2>&1; then
+    # Fallback ke python3
+    if python3 -c "import hashlib, sys; f=open('$TEMP_BIN','rb').read(); h=hashlib.sha256(f).hexdigest(); sys.exit(0 if h == '$TARGET_CHECKSUM' else 1)" >/dev/null 2>&1; then
         VERIFIED=true
     fi
 fi
 
 if [ "$VERIFIED" = false ]; then
-    echo -e "${RED}[Error] Checksum SHA256 tidak cocok! Pembajakan berkas atau unduhan rusak dideteksi.${NC}"
-    echo -e "${RED}Instalasi dibatalkan demi keamanan.${NC}"
-    rm -f "$TEMP_FILE"
+    echo -e "${RED}[Error] Checksum SHA256 tidak cocok! Berkas biner tidak aman atau rusak.${NC}"
+    rm -f "$TEMP_BIN" "$TEMP_SUM"
     exit 1
 fi
 
-echo -e "${GREEN}✓ Verifikasi checksum berhasil. Berkas biner aman!${NC}"
+echo -e "${GREEN}✓ Verifikasi checksum berhasil!${NC}"
 
 # --- INSTAL BINER ---
 FINAL_BINARY_PATH="$INSTALL_DIR/intimclaw-bin"
-mv "$TEMP_FILE" "$FINAL_BINARY_PATH"
+mv "$TEMP_BIN" "$FINAL_BINARY_PATH"
 chmod +x "$FINAL_BINARY_PATH"
+rm -f "$TEMP_SUM"
 
 # --- SETUP DIREKTORI DATA & CONFIG ---
 CONFIG_DIR=""
@@ -172,7 +183,8 @@ fi
 
 mkdir -p "$CONFIG_DIR"
 
-# Download Python Wizard File
+# Download Python Wizard File dari Github
+REPO_RAW_URL="https://raw.githubusercontent.com/$GITHUB_REPO/main"
 curl -fsSL -o "$WIZARD_DEST" "$REPO_RAW_URL/intimclaw_wizard.py"
 chmod +x "$WIZARD_DEST"
 
@@ -199,6 +211,7 @@ else
     FINAL_BINARY_PATH="$INSTALL_DIR/intimclaw-bin"
 fi
 
+GITHUB_REPO="xxayii57/bot-keuangan"
 REPO_RAW_URL="https://raw.githubusercontent.com/xxayii57/bot-keuangan/main"
 
 # Handle CLI Update Command
@@ -224,27 +237,29 @@ if [ "$1" = "update" ]; then
         [ "$OS_NAME" = "darwin" ] && BINARY_NAME="intimclaw-darwin-$ARCH"
     fi
     
-    DOWNLOAD_URL="$REPO_RAW_URL/releases/$BINARY_NAME"
-    CHECKSUM_URL="$REPO_RAW_URL/docs/release/sha256.txt"
-    TEMP_FILE="$(mktemp)"
+    LATEST_RELEASE_URL="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+    RELEASE_JSON=$(curl -fsSL "$LATEST_RELEASE_URL" 2>/dev/null || true)
+    TAG_NAME=$(echo "$RELEASE_JSON" | grep '"tag_name":' | sed -E 's/.*"tag_name":\s*"(.*)".*/\1/')
     
-    echo "Mengecek rilis terbaru & checksum..."
-    CHECKSUMS_DATA=$(curl -fsSL "$CHECKSUM_URL")
-    TARGET_CHECKSUM=$(echo "$CHECKSUMS_DATA" | grep "$BINARY_NAME" | awk '{print $1}')
-    
-    if [ -z "$TARGET_CHECKSUM" ]; then
-        echo "[Error] Checksum untuk $BINARY_NAME tidak ditemukan."
-        rm -f "$TEMP_FILE"
+    if [ -z "$TAG_NAME" ]; then
+        echo "[Error] Gagal mendeteksi rilis terbaru dari GitHub."
         exit 1
     fi
     
+    DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/$TAG_NAME/$BINARY_NAME"
+    CHECKSUM_URL="https://github.com/$GITHUB_REPO/releases/download/$TAG_NAME/SHA256SUMS"
+    
+    TEMP_FILE="$(mktemp)"
+    TEMP_SUM="$(mktemp)"
+    
+    echo "Mengunduh SHA256SUMS..."
+    curl -fsSL -o "$TEMP_SUM" "$CHECKSUM_URL"
+    
     echo "Mengunduh biner pembaruan..."
-    if ! curl -fsSL -o "$TEMP_FILE" "$DOWNLOAD_URL"; then
-        echo "Mencoba fallback lokal dari repo assets..."
-        curl -fsSL -o "$TEMP_FILE" "$REPO_RAW_URL/intimclaw-android-project/app/src/main/assets/intimclaw-android"
-    fi
+    curl -fsSL -o "$TEMP_FILE" "$DOWNLOAD_URL"
     
     # Verifikasi Checksum
+    TARGET_CHECKSUM=$(grep "$BINARY_NAME" "$TEMP_SUM" | awk '{print $1}')
     VERIFIED=false
     if command -v sha256sum >/dev/null 2>&1; then
         echo "$TARGET_CHECKSUM  $TEMP_FILE" | sha256sum -c - >/dev/null 2>&1 && VERIFIED=true
@@ -256,13 +271,14 @@ if [ "$1" = "update" ]; then
     
     if [ "$VERIFIED" = false ]; then
         echo "[Error] Verifikasi SHA256 gagal! Berkas pembaruan dibatalkan."
-        rm -f "$TEMP_FILE"
+        rm -f "$TEMP_FILE" "$TEMP_SUM"
         exit 1
     fi
     
     # Ganti biner lama dengan aman
     mv "$TEMP_FILE" "$FINAL_BINARY_PATH"
     chmod +x "$FINAL_BINARY_PATH"
+    rm -f "$TEMP_SUM"
     
     # Update Python Wizard
     curl -fsSL -o "$WIZARD_DEST" "$REPO_RAW_URL/intimclaw_wizard.py"
@@ -339,8 +355,8 @@ if [ "$IS_TERMUX" = false ]; then
 fi
 
 echo -e "${GREEN}=====================================================${NC}"
-echo -e "${GREEN}       INTIMCLAW CLI BERHASIL DIINSTAL COK!          ${NC}"
+echo -e "${GREEN}✓ INTIMCLAW CLI BERHASIL DIINSTAL!                  ${NC}"
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "Silakan ketik ${BLUE}source ~/.bashrc${NC} (atau zshrc jika zsh) untuk mereload PATH."
-echo -e "Ketik ${BLUE}intimclaw${NC} di terminal lo untuk memulai setup wizard!"
+echo -e "Ketik ${BLUE}intimclaw --version${NC} untuk menguji biner."
 echo -e "${BLUE}=====================================================${NC}"
