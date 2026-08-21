@@ -126,38 +126,66 @@ func GetConfigPath() string {
 	return filepath.Join(home, ".intimclaw", "config.toml")
 }
 
+func GetMemoryPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "/root"
+	}
+	return filepath.Join(home, ".intimclaw", "memory.db")
+}
+
+func GetSkillsDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "/root"
+	}
+	return filepath.Join(home, ".intimclaw", "skills")
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		Agent: AgentConfig{
 			Name:     "intimclaw",
 			Version:  "0.1.0",
-			Provider: "jerouter",
-			Model:    "jr/f/deepseek-v4-flash-free",
-			Persona:  "superintim",
+			Provider: "openai",
+			Model:    "gpt-4o-mini",
+			Persona:  "default",
 		},
 		Providers: []ProviderConfig{
 			{
-				Name:    "jerouter",
+				Name:    "openai",
 				Type:    "openai-compatible",
-				BaseURL: "https://9router.intim.my.id/v1",
+				BaseURL: "https://api.openai.com/v1",
 				Models: []string{
-					"jr/f/deepseek-v4-flash-free",
-					"jr/f/mimo-v2.5-free",
-					"jr/f/nemotron-3-ultra-free",
-					"jr/f/north-mini-code-free",
-					"jr/f/laguna-s-2.1-free",
-					"jr/f/big-pickle",
-					"opencode",
+					"gpt-4o-mini",
+					"gpt-4o",
+				},
+			},
+			{
+				Name:    "anthropic",
+				Type:    "anthropic",
+				BaseURL: "https://api.anthropic.com/v1",
+				Models: []string{
+					"claude-3-5-sonnet-latest",
+				},
+			},
+			{
+				Name:    "ollama",
+				Type:    "openai-compatible",
+				BaseURL: "http://localhost:11434/v1",
+				Models: []string{
+					"llama3.2",
+					"codellama",
 				},
 			},
 		},
 		Channels: ChannelsConfig{
-			Telegram: TelegramConfig{Enabled: true},
+			Telegram: TelegramConfig{Enabled: false},
 			WebChat:  WebChatConfig{Enabled: true, Port: 18080, Host: "127.0.0.1"},
 		},
 		Skills: SkillsConfig{
 			Enabled:     true,
-			Directories: []string{"skills", "superintim/skills"},
+			Directories: []string{GetSkillsDir()},
 		},
 		Memory: MemoryConfig{
 			Backend:        "sqlite",

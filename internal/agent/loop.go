@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -500,11 +501,19 @@ func (a *Agent) parseResponse(body []byte) string {
 	return "No response from model"
 }
 
+func (a *Agent) getPersonaDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "/root"
+	}
+	return filepath.Join(home, ".intimclaw", "persona")
+}
+
 func (a *Agent) buildSystemPrompt() string {
-	soulPath := "/root/intimclaw/superintim/SOUL.md"
-	identityPath := "/root/intimclaw/superintim/IDENTITY.md"
-	
-	doctrinePath := "/root/intimclaw/superintim/CORE_DOCTRINE.md"
+	personaDir := a.getPersonaDir()
+	soulPath := filepath.Join(personaDir, "SOUL.md")
+	identityPath := filepath.Join(personaDir, "IDENTITY.md")
+	doctrinePath := filepath.Join(personaDir, "CORE_DOCTRINE.md")
 	
 	soulData, err := os.ReadFile(soulPath)
 	soulStr := ""
@@ -542,9 +551,9 @@ func (a *Agent) buildSystemPrompt() string {
 		prompt += doctrineStr + "\n\n"
 	}
 
-	factsScript := `import sqlite3
+	factsScript := `import sys, sqlite3
 try:
-    conn = sqlite3.connect('/root/microclaw/microclaw.db')
+    conn = sqlite3.connect(sys.argv[1])
     cursor = conn.cursor()
     cursor.execute("SELECT content FROM memory_facts WHERE status = 'active' AND confidence >= 50")
     rows = cursor.fetchall()
@@ -554,15 +563,15 @@ try:
 except Exception:
     pass
 `
-	activeFacts, _ := runPythonMemory(factsScript)
+	activeFacts, _ := runPythonMemory(factsScript, a.getMemoryDBPath())
 	if activeFacts != "" {
 		prompt += "# USER PROFILE & CONTEXT\n"
 		prompt += activeFacts + "\n\n"
 	}
 
-	lessonsScript := `import sqlite3
+	lessonsScript := `import sys, sqlite3
 try:
-    conn = sqlite3.connect('/root/microclaw/microclaw.db')
+    conn = sqlite3.connect(sys.argv[1])
     cursor = conn.cursor()
     cursor.execute("SELECT title, content FROM lessons WHERE confidence >= 0.7")
     rows = cursor.fetchall()
@@ -572,7 +581,7 @@ try:
 except Exception:
     pass
 `
-	activeLessons, _ := runPythonMemory(lessonsScript)
+	activeLessons, _ := runPythonMemory(lessonsScript, a.getMemoryDBPath())
 	if activeLessons != "" {
 		prompt += "# EXPERIENTIAL LESSONS (GUIDELINES FROM PAST SESSIONS)\n"
 		prompt += "Avoid repeating failures by adhering to these lessons learned from past experiences:\n"
@@ -943,6 +952,10 @@ func (a *Agent) toolHTTPRequest(args map[string]interface{}) (string, error) {
 	return fmt.Sprintf("Status: %d\n%s", resp.StatusCode, string(body)), nil
 }
 
+func (a *Agent) getMemoryDBPath() string {
+	return config.GetMemoryPath()
+}
+
 func runPythonMemory(script string, args ...string) (string, error) {
 	cmdArgs := append([]string{"-c", script}, args...)
 	cmd := exec.Command("python3", cmdArgs...)
@@ -963,14 +976,14 @@ func (a *Agent) toolMemorySave(args map[string]interface{}) (string, error) {
 	safeKey := strings.ToLower(strings.ReplaceAll(key, " ", "_"))
 	
 	script := `import sys, sqlite3
-conn = sqlite3.connect('/root/microclaw/microclaw.db')
+conn = sqlite3.connect(sys.argv[1])
 cursor = conn.cursor()
 cursor.execute('CREATE TABLE IF NOT EXISTS permanent_facts (key TEXT PRIMARY KEY, value TEXT)')
 cursor.execute('INSERT OR REPLACE INTO permanent_facts (key, value) VALUES (?, ?)', (sys.argv[1], sys.argv[2]))
 conn.commit()
 print("ok")
 `
-	_, err := runPythonMemory(script, safeKey, value)
+	_, err := runPythonMemory(script, a.getMemoryDBPath(), safeKey, value)
 	if err != nil {
 		return "", fmt.Errorf("failed to save memory to DB: %w", err)
 	}
@@ -995,7 +1008,7 @@ def cosine_similarity(v1, v2):
     return dot / (math.sqrt(sum1) * math.sqrt(sum2))
 
 try:
-    conn = sqlite3.connect('/root/microclaw/microclaw.db')
+	conn = sqlite3.connect(sys.argv[1])
     cursor = conn.cursor()
     cursor.execute('CREATE TABLE IF NOT EXISTS permanent_facts (key TEXT PRIMARY KEY, value TEXT)')
     cursor.execute('SELECT key, value FROM permanent_facts')
@@ -1023,7 +1036,7 @@ try:
 except Exception as e:
     print(json.dumps([{'error': str(e)}]))
 `
-	out, err := runPythonMemory(script, query)
+	out, err := runPythonMemory(script, a.getMemoryDBPath(), query)
 	if err != nil {
 		return "", fmt.Errorf("failed to search vector memory: %w", err)
 	}
@@ -1152,7 +1165,7 @@ try:
 except Exception as e:
     sys.exit(0)
 
-conn = sqlite3.connect('/root/microclaw/microclaw.db')
+conn = sqlite3.connect(sys.argv[1])
 cursor = conn.cursor()
 
 # Initialize tables
@@ -1319,7 +1332,7 @@ print("done")
 		decayDays = 30
 	}
 
-	_, err = runPythonMemory(pythonScript, sessionID, cleaned, fmt.Sprintf("%d", decayDays))
+	_, err = runPythonMemory(pythonScript, a.getMemoryDBPath(), sessionID, cleaned, fmt.Sprintf("%d", decayDays))
 	if err != nil {
 		fmt.Printf("[intimclaw] Python memory write error: %v\n", err)
 	}

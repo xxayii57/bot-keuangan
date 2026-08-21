@@ -97,7 +97,7 @@ def run_wizard():
     print("2) Anthropic Claude (Sangat Pintar - Butuh API Key)")
     print("3) OpenAI GPT (Standar Industri)")
     print("4) Groq (Super Cepat)")
-    print("5) Custom OpenAI-Compatible (9router, Ollama, dll)")
+    print("5) Custom OpenAI-Compatible (Ollama, LM Studio, dll)")
     
     choice = input("\nMasukkan nomor pilihan Anda (1-5): ").strip()
     
@@ -123,7 +123,7 @@ def run_wizard():
         api_url = "https://api.groq.com/openai/v1"
     else:
         provider = "custom"
-        api_url = input("Masukkan Base URL API Anda (contoh: https://9router.intim.my.id/v1): ").strip()
+        api_url = input("Masukkan Base URL API Anda (contoh: http://localhost:11434/v1): ").strip()
         default_model = input("Masukkan Nama Model Default (contoh: deepseek-v3): ").strip()
         
     api_key = input(f"Masukkan API Key {provider.upper()} Anda: ").strip()
@@ -217,7 +217,7 @@ forbidden_paths = [".ssh", ".gnupg"]
     if not os.path.exists(soul_path):
         soul_content = """# SOUL OF INTIMCLAW AGENTIC CODER
 
-Anda adalah **IntimClaw**, AI Agent coding mandiri yang tangguh, dikembangkan oleh xxayii (intim.my.id).
+Anda adalah **IntimClaw**, AI Agent coding mandiri yang tangguh dan efisien.
 
 ## Gaya Berkomunikasi & Nada:
 - Gunakan bahasa Indonesia santai (casual lo/gue).

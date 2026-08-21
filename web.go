@@ -40,6 +40,10 @@ var (
 	queryCount = 0
 )
 
+func getMemoryDBPath() string {
+	return config.GetMemoryPath()
+}
+
 func startWebUI(port int, host string) {
 	cfg, _ = config.Load()
 	startTime = time.Now()
@@ -714,9 +718,9 @@ func handleSkillToggle(w http.ResponseWriter, r *http.Request) {
 // Memory
 // ═══════════════════════════════════════════════════════════════
 func handleMemory(w http.ResponseWriter, r *http.Request) {
-	script := `import sqlite3, json
+	script := `import sys, sqlite3, json
 try:
-    conn = sqlite3.connect('/root/microclaw/microclaw.db')
+    conn = sqlite3.connect(sys.argv[1])
     cursor = conn.cursor()
     # Initialize tables
     cursor.execute('''
@@ -764,7 +768,7 @@ try:
 except Exception as e:
     print(json.dumps([]))
 `
-	out, err := runMemoryPythonArgs(script)
+	out, err := runMemoryPythonArgs(script, getMemoryDBPath())
 	if err != nil {
 		jsonError(w, err.Error(), 500)
 		return
@@ -788,14 +792,14 @@ func handleMemoryDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	script := `import sys, sqlite3
-conn = sqlite3.connect('/root/microclaw/microclaw.db')
+conn = sqlite3.connect(sys.argv[1])
 cursor = conn.cursor()
 cursor.execute('DELETE FROM memory_facts WHERE id = ?', (sys.argv[1],))
 cursor.execute('DELETE FROM memory_evidence WHERE fact_id = ?', (sys.argv[1],))
 conn.commit()
 print("ok")
 `
-	_, err := runMemoryPythonArgs(script, req.ID)
+	_, err := runMemoryPythonArgs(script, getMemoryDBPath(), req.ID)
 	if err != nil {
 		jsonError(w, "Failed to delete fact: "+err.Error(), 500)
 		return
@@ -839,7 +843,7 @@ func handleMemoryAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	script := `import sys, sqlite3, uuid
-conn = sqlite3.connect('/root/microclaw/microclaw.db')
+conn = sqlite3.connect(sys.argv[1])
 cursor = conn.cursor()
 new_id = str(uuid.uuid4())
 cursor.execute('''
@@ -849,7 +853,7 @@ VALUES (?, ?, ?, 100, 'active', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 conn.commit()
 print("ok")
 `
-	_, err := runMemoryPythonArgs(script, content, category)
+	_, err := runMemoryPythonArgs(script, getMemoryDBPath(), content, category)
 	if err != nil {
 		jsonError(w, "Failed to add fact: "+err.Error(), 500)
 		return
@@ -874,14 +878,14 @@ func handleMemoryTogglePin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	script := `import sys, sqlite3
-conn = sqlite3.connect('/root/microclaw/microclaw.db')
+conn = sqlite3.connect(sys.argv[1])
 cursor = conn.cursor()
 pinned_val = 1 if sys.argv[2] == 'true' else 0
 cursor.execute('UPDATE memory_facts SET pinned = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', (pinned_val, sys.argv[1]))
 conn.commit()
 print("ok")
 `
-	_, err := runMemoryPythonArgs(script, req.ID, fmt.Sprintf("%t", req.Pinned))
+	_, err := runMemoryPythonArgs(script, getMemoryDBPath(), req.ID, fmt.Sprintf("%t", req.Pinned))
 	if err != nil {
 		jsonError(w, "Failed to toggle pin: "+err.Error(), 500)
 		return
@@ -891,11 +895,10 @@ print("ok")
 }
 
 func handleLearning(w http.ResponseWriter, r *http.Request) {
-	script := `import sqlite3, json
+	script := `import sys, sqlite3, json
 try:
-    conn = sqlite3.connect('/root/microclaw/microclaw.db')
+    conn = sqlite3.connect(sys.argv[1])
     cursor = conn.cursor()
-    
     cursor.execute("CREATE TABLE IF NOT EXISTS experiences (id TEXT, task TEXT, actions TEXT, errors TEXT, solution TEXT, result TEXT, timestamp DATETIME)")
     cursor.execute("CREATE TABLE IF NOT EXISTS lessons (id TEXT, title TEXT, content TEXT, category TEXT, confidence REAL, used_count INTEGER, success_count INTEGER, created_at DATETIME, updated_at DATETIME)")
 
@@ -936,7 +939,7 @@ except Exception as e:
         "lessons": []
     }))
 `
-	out, err := runMemoryPythonArgs(script)
+	out, err := runMemoryPythonArgs(script, getMemoryDBPath())
 	if err != nil {
 		jsonError(w, err.Error(), 500)
 		return
@@ -1145,10 +1148,11 @@ func jsonOK(w http.ResponseWriter, msg string) {
 func getWebUIDir() string {
 	ex, _ := os.Executable()
 	dir := filepath.Dir(ex)
+	home, _ := os.UserHomeDir()
 	for _, p := range []string{
 		filepath.Join(dir, "webui"),
+		filepath.Join(home, ".intimclaw", "webui"),
 		"webui",
-		"/root/intimclaw/webui",
 	} {
 		if _, err := os.Stat(p); err == nil {
 			return p
