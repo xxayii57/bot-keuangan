@@ -117,7 +117,7 @@ func runAgent(args []string) {
 	} else {
 		// Interactive mode
 		fmt.Printf("IntimClaw v%s — Interactive Mode\n", VERSION)
-		fmt.Println("Type your message. Ctrl+C to exit.\n")
+		fmt.Println("Type your message. Ctrl+C to exit.")
 		for {
 			fmt.Print("You: ")
 			var input string
