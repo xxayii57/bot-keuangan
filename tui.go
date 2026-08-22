@@ -28,7 +28,7 @@ const (
 var (
 	styleTitle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("14")) // cyan
+			Foreground(lipgloss.Color("14"))
 
 	styleDim = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("8"))
@@ -40,17 +40,12 @@ var (
 			Foreground(lipgloss.Color("1"))
 
 	styleInputBox = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("8")).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("62")).
 			Padding(0, 1)
 
-	styleInputBoxActive = lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("6")).
-				Padding(0, 1)
-
 	stylePaletteBox = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
+			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("8")).
 			Padding(0, 1)
 
@@ -63,9 +58,6 @@ var (
 
 	styleFooter = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("8"))
-
-	styleResponse = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("7"))
 
 	styleError = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("1"))
@@ -97,11 +89,19 @@ type model struct {
 	startAt     time.Time
 	paletteIdx  int
 	paletteList []string
+	cmdBuf      string // accumulates "/" prefix for palette
 }
 
 type responseMsg struct {
 	resp string
 	err  error
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func initialModel(cfg *config.Config, a *agent.Agent) model {
@@ -123,6 +123,7 @@ func initialModel(cfg *config.Config, a *agent.Agent) model {
 		session:  &chatSession{Name: "default", Started: time.Now()},
 		spinner:  sp,
 		phase:    phaseInput,
+		cmdBuf:   "",
 	}
 }
 
@@ -145,7 +146,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case responseMsg:
 		m.lastResp = msg.resp
-		m.lastErr = msg.err.Error()
+		if msg.err != nil {
+			m.lastErr = msg.err.Error()
+		} else {
+			m.lastErr = ""
+		}
 		m.phase = phaseResponse
 		return m, nil
 
@@ -168,12 +173,12 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// During palette
+	// During palette — handle palette keys only
 	if m.phase == phasePalette {
 		return m.handlePaletteKey(msg)
 	}
 
-	// During input
+	// During input — handle input keys
 	return m.handleInputKey(msg)
 }
 
@@ -191,11 +196,13 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Slash command
 		if strings.HasPrefix(input, "/") {
 			m.input.Reset()
+			m.cmdBuf = ""
 			return m.executeCommand(input)
 		}
 
 		// Agent request
 		m.input.Reset()
+		m.cmdBuf = ""
 		m.phase = phaseThinking
 		m.startAt = time.Now()
 		return m, tea.Batch(m.spinner.Tick, m.sendRequest(input))
@@ -225,6 +232,7 @@ func (m model) handlePaletteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEsc:
 		// Close palette, return to input
 		m.phase = phaseInput
+		m.cmdBuf = ""
 		m.input.Reset()
 		return m, nil
 
@@ -244,17 +252,21 @@ func (m model) handlePaletteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.paletteList) > 0 && m.paletteIdx < len(m.paletteList) {
 			selected := m.paletteList[m.paletteIdx]
 			m.input.Reset()
-			m.phase = phaseInput
+			m.cmdBuf = ""
+			// Execute command — this sets phase to phaseInput on success
 			return m.executeCommand(selected)
 		}
+		// No selection — close palette
 		m.phase = phaseInput
+		m.cmdBuf = ""
+		m.input.Reset()
 		return m, nil
 
 	case tea.KeyCtrlC:
 		return m, tea.Quit
 
 	default:
-		// Typing in palette — filter
+		// Typing in palette — let textinput handle it, then filter
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
 		val := m.input.Value()
@@ -262,6 +274,7 @@ func (m model) handlePaletteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.paletteList) == 0 {
 			// No matches — close palette
 			m.phase = phaseInput
+			m.cmdBuf = ""
 		}
 		return m, cmd
 	}
@@ -269,7 +282,7 @@ func (m model) handlePaletteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *model) showPalette(filter string) {
 	m.phase = phasePalette
-	m.input.Reset()
+	m.cmdBuf = filter
 	m.updatePaletteFilter(filter)
 }
 
@@ -286,6 +299,10 @@ func (m *model) updatePaletteFilter(filter string) {
 
 func (m model) executeCommand(input string) (tea.Model, tea.Cmd) {
 	parts := strings.Fields(input)
+	if len(parts) == 0 {
+		m.phase = phaseInput
+		return m, nil
+	}
 	cmd := strings.ToLower(parts[0])
 
 	// Handle built-in actions that need model state
@@ -308,20 +325,15 @@ func (m model) executeCommand(input string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	// If registry printed output, we stay in input mode
+	// Command executed (printed output), return to input mode
 	m.phase = phaseInput
 	return m, nil
 }
 
 func (m model) sendRequest(input string) tea.Cmd {
 	return func() tea.Msg {
-		m.session.Messages = append(m.session.Messages, agent.Message{Role: "user", Content: input})
 		resp, err := m.agent.Run(input)
-		if err != nil {
-			return responseMsg{err: err}
-		}
-		m.session.Messages = append(m.session.Messages, agent.Message{Role: "assistant", Content: resp})
-		return responseMsg{resp: resp}
+		return responseMsg{resp: resp, err: err}
 	}
 }
 
@@ -330,8 +342,12 @@ func (m model) sendRequest(input string) tea.Cmd {
 func (m model) View() string {
 	var b strings.Builder
 
-	// Header
-	b.WriteString(m.viewHeader())
+	// Logo (always visible at top)
+	b.WriteString(m.viewLogo())
+	b.WriteString("\n")
+
+	// Session info
+	b.WriteString(m.viewSessionInfo())
 	b.WriteString("\n")
 
 	// Content area
@@ -340,7 +356,6 @@ func (m model) View() string {
 		b.WriteString(m.viewThinking())
 	case phaseResponse:
 		b.WriteString(m.viewResponse())
-		m.lastResp = ""
 	case phasePalette:
 		b.WriteString(m.viewPalette())
 		b.WriteString(m.viewInputBox())
@@ -354,34 +369,37 @@ func (m model) View() string {
 	return b.String()
 }
 
-func (m model) viewHeader() string {
+func (m model) viewLogo() string {
+	logo := `     ____                          ____ _
+    / ___|_      ____ _ _   _  __ _  __ _  ___ _ __ ___
+   | |   \ \ /\ / / _` + "`" + ` | | | |/ _` + "`" + ` |/ _` + "`" + ` |/ _ \ '_ ` + "`" + ` __
+   | |___ \ V  V / (_| | |_| | (_| | (_| |  __/ | | | |
+    \____| \_/\_/ \__,_|\__, |\__,_|\__, |\___|_| |_| |
+                        |___/      |___/`
+	return styleTitle.Render(logo)
+}
+
+func (m model) viewSessionInfo() string {
 	provider := m.cfg.Agent.Provider
 	if provider == "" {
 		provider = "none"
 	}
-	model := m.cfg.Agent.Model
-	if model == "" {
-		model = "none"
+	modelName := m.cfg.Agent.Model
+	if modelName == "" {
+		modelName = "none"
 	}
 
 	var b strings.Builder
-	b.WriteString("\n")
-	b.WriteString(styleTitle.Render("IntimClaw"))
-	b.WriteString(fmt.Sprintf("  %s v%s  %s", styleDim.Render(""), VERSION, styleDim.Render("AI Agent System")))
-	b.WriteString("\n")
-	b.WriteString(styleGreen.Render("● Online"))
-	b.WriteString("\n\n")
+	b.WriteString(fmt.Sprintf("  %s v%s  %s\n", styleDim.Render("IntimClaw"), VERSION, styleDim.Render("AI Agent System")))
+	b.WriteString(fmt.Sprintf("  %s● Online%s\n\n", styleGreen.Render(""), ""))
 	b.WriteString(fmt.Sprintf("  Provider : %s\n", provider))
-	b.WriteString(fmt.Sprintf("  Model    : %s\n", model))
+	b.WriteString(fmt.Sprintf("  Model    : %s\n", modelName))
 	b.WriteString(fmt.Sprintf("  Session  : %s\n", m.session.Name))
 	return b.String()
 }
 
 func (m model) viewInputBox() string {
-	width := m.width - 4
-	if width < 20 {
-		width = 20
-	}
+	width := maxInt(m.width-4, 20)
 
 	// Build the content line
 	content := m.input.View()
@@ -395,21 +413,15 @@ func (m model) viewInputBox() string {
 	}
 	pad := strings.Repeat(" ", padLen)
 
-	box := fmt.Sprintf("%s%s%s%s", styleInputBoxActive.Render("│"), prompt, content, pad)
+	box := fmt.Sprintf("%s%s%s%s", styleInputBox.Render("│"), prompt, content, pad)
 	return box + "\n"
 }
 
 func (m model) viewPalette() string {
-	filter := m.input.Value()
-	_ = filter // used for display
-
 	var b strings.Builder
+
 	b.WriteString(stylePaletteBox.Render("Commands"))
 	b.WriteString("\n")
-
-	if filter != "" {
-		b.WriteString(fmt.Sprintf("  %s%s%s\n", styleDim.Render(""), filter, styleDim.Render("█")))
-	}
 
 	if len(m.paletteList) == 0 {
 		b.WriteString("  (no matching commands)\n")
@@ -442,7 +454,7 @@ func (m model) viewThinking() string {
 
 func (m model) viewResponse() string {
 	if m.lastErr != "" {
-		return fmt.Sprintf("\n%s%s%s\n\n", styleError.Render("✗ "), styleError.Render("Request failed"), styleDim.Render("\n"+m.lastErr))
+		return fmt.Sprintf("\n%s%s%s\n\n", styleRed.Render("✗ "), styleRed.Render("Request failed"), styleDim.Render("\n"+m.lastErr))
 	}
 	if m.lastResp == "" {
 		return ""
@@ -451,17 +463,10 @@ func (m model) viewResponse() string {
 }
 
 func (m model) viewFooter() string {
-	sepLen := m.width - 2
-	if sepLen < 0 {
-		sepLen = 0
-	}
+	sepLen := maxInt(m.width-2, 0)
 	sep := strings.Repeat("─", sepLen)
 	return "\n" + styleFooter.Render(sep) + "\n" +
 		styleFooter.Render("  ctrl+p commands") + "\n"
-}
-
-func (m model) updateWidth(w int) {
-	m.width = w
 }
 
 // ─── Entry point ──────────────────────────────────────────────
