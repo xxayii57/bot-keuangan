@@ -387,12 +387,13 @@ func (m model) viewInputBox() string {
 	content := m.input.View()
 	prompt := "> "
 
-	// Pad content to fill width
+	// Pad content to fill width (safe: never negative)
 	contentLen := lipgloss.Width(content) + lipgloss.Width(prompt)
-	pad := ""
-	if contentLen < width {
-		pad = strings.Repeat(" ", width-contentLen)
+	padLen := width - contentLen
+	if padLen < 0 {
+		padLen = 0
 	}
+	pad := strings.Repeat(" ", padLen)
 
 	box := fmt.Sprintf("%s%s%s%s", styleInputBoxActive.Render("│"), prompt, content, pad)
 	return box + "\n"
@@ -450,9 +451,13 @@ func (m model) viewResponse() string {
 }
 
 func (m model) viewFooter() string {
-	parts := []string{styleFooter.Render("ctrl+p commands")}
-	return "\n" + styleFooter.Render(strings.Repeat("─", m.width-2)) + "\n" +
-		styleFooter.Render("  "+strings.Join(parts, "  ")) + "\n"
+	sepLen := m.width - 2
+	if sepLen < 0 {
+		sepLen = 0
+	}
+	sep := strings.Repeat("─", sepLen)
+	return "\n" + styleFooter.Render(sep) + "\n" +
+		styleFooter.Render("  ctrl+p commands") + "\n"
 }
 
 func (m model) updateWidth(w int) {
