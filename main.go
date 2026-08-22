@@ -181,6 +181,10 @@ func runAgent(args []string) {
 	}
 
 	// Interactive mode
+	runInteractive(cfg, a)
+}
+
+func runInteractive(cfg *config.Config, a *agent.Agent) {
 	printSplash()
 	printSessionHeader(cfg)
 
@@ -193,28 +197,56 @@ func runAgent(args []string) {
 		os.Exit(0)
 	}()
 
-	reader := bufio.NewReader(os.Stdin)
+	registry := NewCommandRegistry()
+	palette := NewCommandPalette(registry, 70)
 	spinner := NewBrandSpinner("intimclaw", 120*time.Millisecond)
 	sess := &chatSession{Name: "default", Started: time.Now()}
+	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		printPrompt()
+		// Print input box
+		fmt.Printf("%s┌─ You ────────────────────────────────────────%s\n", colorDim, colorReset)
+		fmt.Printf("%s│%s > ", colorDim, colorReset)
+
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			// EOF or read error — graceful exit
 			fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
 			return
 		}
 		input = strings.TrimSpace(input)
+
+		// Close input box
+		fmt.Printf("%s└───────────────────────────────────────────────%s\n", colorDim, colorReset)
+
 		if input == "" {
+			fmt.Println()
 			continue
 		}
 
-		// Slash commands
-		if strings.HasPrefix(input, "/") {
-			if handleSlashCommand(input, cfg, a, sess) {
-				return // /exit or /quit
+		// Handle "/" prefix — show palette
+		if input == "/" {
+			palette.ShowAll()
+			fmt.Printf("%s> %s", colorDim, colorReset)
+			input, err = reader.ReadString('\n')
+			if err != nil {
+				fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
+				return
 			}
+			input = strings.TrimSpace(input)
+			if input == "" {
+				fmt.Println()
+				continue
+			}
+			// Close the second input box
+			fmt.Printf("%s└───────────────────────────────────────────────%s\n", colorDim, colorReset)
+		}
+
+		// Handle slash commands
+		if strings.HasPrefix(input, "/") {
+			if registry.Execute(input, cfg, sess) {
+				return
+			}
+			fmt.Println()
 			continue
 		}
 
@@ -230,6 +262,7 @@ func runAgent(args []string) {
 			fmt.Fprintf(os.Stderr, "  Provider: %s\n", cfg.Agent.Provider)
 			fmt.Fprintf(os.Stderr, "  Model: %s\n", cfg.Agent.Model)
 			fmt.Fprintf(os.Stderr, "  Reason: %v\n", err)
+			fmt.Println()
 			continue
 		}
 
@@ -253,125 +286,6 @@ func printSessionHeader(cfg *config.Config) {
 	fmt.Printf("  Provider : %s\n", provider)
 	fmt.Printf("  Model    : %s\n", model)
 	fmt.Printf("  Session  : default\n")
-	fmt.Println()
-}
-
-func printPrompt() {
-	fmt.Printf("%s┌─ You ─────────────────────────────────────%s\n", colorDim, colorReset)
-	fmt.Printf("%s│ > %s", colorDim, colorReset)
-}
-
-// ─── Slash Commands ──────────────────────────────────────────────
-
-// handleSlashCommand processes a slash command. Returns true if the
-// session should exit (e.g. /exit, /quit).
-func handleSlashCommand(input string, cfg *config.Config, a *agent.Agent, sess *chatSession) bool {
-	parts := strings.Fields(input)
-	cmd := strings.ToLower(parts[0])
-
-	switch cmd {
-	case "/help", "/h":
-		printSlashHelp()
-	case "/model":
-		printModelInfo(cfg)
-	case "/models":
-		printAvailableModels(cfg)
-	case "/status":
-		printStatus()
-	case "/context":
-		printContext(sess)
-	case "/session":
-		printSessionInfo(sess)
-	case "/new":
-		sess.Messages = nil
-		sess.Started = time.Now()
-		fmt.Printf("\n  %s✓ Session reset. History cleared.%s\n\n", colorGreen, colorReset)
-	case "/clear":
-		fmt.Print("\033[2J\033[H")
-	case "/exit", "/quit":
-		fmt.Printf("%sBye!%s\n", colorDim, colorReset)
-		return true
-	default:
-		fmt.Printf("\n  Unknown command: %s\n", cmd)
-		fmt.Printf("  Type /help for available commands.\n\n")
-	}
-	return false
-}
-
-func printSlashHelp() {
-	fmt.Println()
-	fmt.Println("  ┌─ Commands ─────────────────────────────────┐")
-	fmt.Println("  │ /help       Show available commands         │")
-	fmt.Println("  │ /model      Current provider & model        │")
-	fmt.Println("  │ /models     Available models from config    │")
-	fmt.Println("  │ /status     System status                   │")
-	fmt.Println("  │ /context    Context window information      │")
-	fmt.Println("  │ /session    Current session info            │")
-	fmt.Println("  │ /new        Start new session               │")
-	fmt.Println("  │ /clear      Clear terminal                  │")
-	fmt.Println("  │ /exit       Exit                            │")
-	fmt.Println("  └─────────────────────────────────────────────┘")
-	fmt.Println()
-}
-
-func printModelInfo(cfg *config.Config) {
-	provider := cfg.Agent.Provider
-	if provider == "" {
-		provider = "none"
-	}
-	model := cfg.Agent.Model
-	if model == "" {
-		model = "none"
-	}
-	fmt.Println()
-	fmt.Printf("  Provider : %s\n", provider)
-	fmt.Printf("  Model    : %s\n", model)
-	fmt.Println()
-}
-
-func printAvailableModels(cfg *config.Config) {
-	fmt.Println()
-	fmt.Println("  Available models:")
-	for _, p := range cfg.Providers {
-		for _, m := range p.Models {
-			marker := " "
-			if p.Name == cfg.Agent.Provider && m == cfg.Agent.Model {
-				marker = "*"
-			}
-			fmt.Printf("  %s %s/%s\n", marker, p.Name, m)
-		}
-	}
-	fmt.Println("  (* = active)")
-	fmt.Println()
-}
-
-func printContext(sess *chatSession) {
-	totalChars := 0
-	for _, m := range sess.Messages {
-		totalChars += len(m.Content)
-	}
-	// Rough estimate: ~4 chars per token
-	estimatedTokens := totalChars / 4
-	messages := len(sess.Messages)
-
-	fmt.Println()
-	fmt.Println("  Context Window")
-	fmt.Println("  ────────────────────────────")
-	fmt.Printf("  Messages   : %d\n", messages)
-	fmt.Printf("  Characters : %d\n", totalChars)
-	fmt.Printf("  Est. Tokens: ~%d\n", estimatedTokens)
-	fmt.Println("  (estimated — actual usage depends on tokenizer)")
-	fmt.Println("  ────────────────────────────")
-	fmt.Println()
-}
-
-func printSessionInfo(sess *chatSession) {
-	elapsed := time.Since(sess.Started)
-	fmt.Println()
-	fmt.Printf("  Session    : %s\n", sess.Name)
-	fmt.Printf("  Messages   : %d\n", len(sess.Messages))
-	fmt.Printf("  Started    : %s\n", sess.Started.Format("15:04:05"))
-	fmt.Printf("  Duration   : %s\n", formatDuration(elapsed))
 	fmt.Println()
 }
 

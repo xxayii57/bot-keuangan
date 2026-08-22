@@ -140,17 +140,23 @@ func TestFormatDurationEdgeCases(t *testing.T) {
 }
 
 func TestSlashHelpOutput(t *testing.T) {
-	printSlashHelp()
+	reg := NewCommandRegistry()
+	cfg := &config.Config{}
+	sess := &chatSession{Name: "test"}
+	reg.Execute("/help", cfg, sess)
 }
 
 func TestSlashModelOutput(t *testing.T) {
+	reg := NewCommandRegistry()
 	cfg := &config.Config{}
 	cfg.Agent.Provider = "openai"
 	cfg.Agent.Model = "gpt-4o"
-	printModelInfo(cfg)
+	sess := &chatSession{Name: "test"}
+	reg.Execute("/model", cfg, sess)
 }
 
 func TestSlashModelsOutput(t *testing.T) {
+	reg := NewCommandRegistry()
 	cfg := &config.Config{}
 	cfg.Agent.Provider = "openai"
 	cfg.Agent.Model = "gpt-4o"
@@ -158,29 +164,116 @@ func TestSlashModelsOutput(t *testing.T) {
 		{Name: "openai", Models: []string{"gpt-4o", "gpt-4o-mini"}},
 		{Name: "anthropic", Models: []string{"claude-3-5-sonnet-latest"}},
 	}
-	printAvailableModels(cfg)
+	sess := &chatSession{Name: "test"}
+	reg.Execute("/models", cfg, sess)
 }
 
 func TestSlashStatusOutput(t *testing.T) {
-	printStatus()
+	reg := NewCommandRegistry()
+	cfg := &config.Config{}
+	sess := &chatSession{Name: "test"}
+	reg.Execute("/status", cfg, sess)
 }
 
 func TestSlashContextOutput(t *testing.T) {
+	reg := NewCommandRegistry()
+	cfg := &config.Config{}
 	sess := &chatSession{Name: "default"}
 	sess.Messages = append(sess.Messages, agent.Message{Role: "user", Content: "hello"})
 	sess.Messages = append(sess.Messages, agent.Message{Role: "assistant", Content: "hi there"})
-	printContext(sess)
+	reg.Execute("/context", cfg, sess)
 }
 
 func TestSlashSessionOutput(t *testing.T) {
+	reg := NewCommandRegistry()
+	cfg := &config.Config{}
 	sess := &chatSession{Name: "test", Started: time.Now()}
 	sess.Messages = append(sess.Messages, agent.Message{Role: "user", Content: "hello"})
-	printSessionInfo(sess)
+	reg.Execute("/session", cfg, sess)
 }
 
 func TestFormatDurationNegative(t *testing.T) {
 	got := formatDuration(-1 * time.Second)
 	if got != "-1.0s" {
 		t.Logf("formatDuration(-1s) = %q", got)
+	}
+}
+
+func TestCommandRegistryMatch(t *testing.T) {
+	reg := NewCommandRegistry()
+	matches := reg.Match("/m")
+	if len(matches) != 2 {
+		t.Errorf("expected 2 matches for /m, got %d", len(matches))
+	}
+	for _, m := range matches {
+		if m.Name != "/model" && m.Name != "/models" {
+			t.Errorf("unexpected match: %s", m.Name)
+		}
+	}
+}
+
+func TestCommandRegistryMatchAll(t *testing.T) {
+	reg := NewCommandRegistry()
+	matches := reg.Match("/")
+	if len(matches) < 9 {
+		t.Errorf("expected >=9 matches for /, got %d", len(matches))
+	}
+}
+
+func TestCommandRegistryExecute(t *testing.T) {
+	reg := NewCommandRegistry()
+	cfg := &config.Config{}
+	sess := &chatSession{Name: "test"}
+
+	// /help should not exit
+	exit := reg.Execute("/help", cfg, sess)
+	if exit {
+		t.Error("/help should not exit")
+	}
+
+	// /exit should exit
+	exit = reg.Execute("/exit", cfg, sess)
+	if !exit {
+		t.Error("/exit should exit")
+	}
+
+	// unknown command should not exit
+	exit = reg.Execute("/unknown", cfg, sess)
+	if exit {
+		t.Error("/unknown should not exit")
+	}
+}
+
+func TestCommandRegistryAliases(t *testing.T) {
+	reg := NewCommandRegistry()
+	cfg := &config.Config{}
+	sess := &chatSession{Name: "test"}
+
+	// /h should work like /help
+	exit := reg.Execute("/h", cfg, sess)
+	if exit {
+		t.Error("/h should not exit")
+	}
+
+	// /quit should work like /exit
+	exit = reg.Execute("/quit", cfg, sess)
+	if !exit {
+		t.Error("/quit should exit")
+	}
+}
+
+func TestCommandPaletteFiltering(t *testing.T) {
+	reg := NewCommandRegistry()
+	palette := NewCommandPalette(reg, 70)
+	_ = palette
+
+	matches := reg.Match("/model")
+	if len(matches) != 2 {
+		t.Errorf("expected 2 matches for /model, got %d", len(matches))
+	}
+
+	matches = reg.Match("/c")
+	if len(matches) < 2 {
+		t.Errorf("expected >=2 matches for /c, got %d", len(matches))
 	}
 }
