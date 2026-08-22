@@ -3,9 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"strings"
-	"syscall"
 	"time"
 
 	"github.com/xxayii/intimclaw/internal/agent"
@@ -13,18 +10,6 @@ import (
 )
 
 const VERSION = "0.1.0"
-
-// ANSI colors
-const (
-	colorReset  = "\033[0m"
-	colorRed    = "\033[31m"
-	colorGreen  = "\033[32m"
-	colorYellow = "\033[33m"
-	colorBlue   = "\033[34m"
-	colorCyan   = "\033[36m"
-	colorBold   = "\033[1m"
-	colorDim    = "\033[2m"
-)
 
 // chatSession holds the state for an interactive chat session.
 type chatSession struct {
@@ -90,20 +75,6 @@ func main() {
 	default:
 		fmt.Printf("Unknown command: %s\nRun 'intimclaw help' for usage.\n", args[0])
 	}
-}
-
-func printSplash() {
-	fmt.Println()
-	fmt.Println(colorCyan + `     ____                          ____ _
-    / ___|_      ____ _ _   _  __ _  __ _  ___ _ __ ___
-   | |   \ \ /\ / / _  | | | |/ _  |/ _  |/ _ \ '_ ` + "`" + ` __
-   | |___ \ V  V / (_| | |_| | (_| | (_| |  __/ | | | |
-    \____| \_/\_/ \__,_|\__, |\__,_|\__, |\___|_| |_| |
-                        |___/      |___/             ` + colorReset)
-	fmt.Println()
-	fmt.Printf("  %sIntimClaw%s %sv%s  %sAI Agent System%s\n", colorBold, colorReset, colorDim, VERSION, colorReset, colorReset)
-	fmt.Printf("  %s● Online%s\n", colorGreen, colorReset)
-	fmt.Println()
 }
 
 func printStatus() {
@@ -180,145 +151,7 @@ func runAgent(args []string) {
 	}
 
 	// Interactive mode
-	runInteractive(cfg, a)
-}
-
-func runInteractive(cfg *config.Config, a *agent.Agent) {
-	printSplash()
-	printSessionHeader(cfg)
-
-	// Graceful Ctrl+C
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigCh
-		fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
-		os.Exit(0)
-	}()
-
-	registry := NewCommandRegistry()
-	palette := NewCommandPalette(registry, 70)
-	spinner := NewBrandSpinner("intimclaw", 120*time.Millisecond)
-	sess := &chatSession{Name: "default", Started: time.Now()}
-	editor := NewInputEditor(os.Stdin)
-	editor.EnableRawMode()
-	defer editor.DisableRawMode()
-
-	printFooter()
-
-	for {
-		input, exited := editor.ReadInput()
-		if exited {
-			fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
-			return
-		}
-		input = strings.TrimSpace(input)
-
-		if input == "" {
-			continue
-		}
-
-		// Slash commands
-		if strings.HasPrefix(input, "/") {
-			if input == "/" {
-				// Show full palette, then read command
-				palette.ShowAll()
-				fmt.Printf("%s> %s", colorDim, colorReset)
-				cmdInput, exited := editor.ReadInput()
-				if exited {
-					fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
-					return
-				}
-				cmdInput = strings.TrimSpace(cmdInput)
-				fmt.Printf("%s└───────────────────────────────────────────────%s\n", colorDim, colorReset)
-				if cmdInput == "" {
-					fmt.Println()
-					continue
-				}
-				if registry.Execute(cmdInput, cfg, sess) {
-					return
-				}
-				fmt.Println()
-				continue
-			}
-			// Check if it's a valid command
-			matches := registry.Match(input)
-			if len(matches) == 1 {
-				// Exact match — execute
-				if registry.Execute(input, cfg, sess) {
-					return
-				}
-				fmt.Println()
-			} else if len(matches) > 1 {
-				// Multiple matches — show palette
-				palette.Show(input)
-				fmt.Printf("%s> %s", colorDim, colorReset)
-				cmdInput, exited := editor.ReadInput()
-				if exited {
-					fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
-					return
-				}
-				cmdInput = strings.TrimSpace(cmdInput)
-				fmt.Printf("%s└───────────────────────────────────────────────%s\n", colorDim, colorReset)
-				if cmdInput == "" {
-					fmt.Println()
-					continue
-				}
-				if registry.Execute(cmdInput, cfg, sess) {
-					return
-				}
-				fmt.Println()
-			} else {
-				// No matches — show help
-				registry.Execute(input, cfg, sess)
-				fmt.Println()
-			}
-			continue
-		}
-
-		// Agent request
-		sess.Messages = append(sess.Messages, agent.Message{Role: "user", Content: input})
-
-		spinner.Start()
-		resp, err := a.Run(input)
-		spinner.Stop()
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "\n%s✗ Request failed%s\n", colorRed, colorReset)
-			fmt.Fprintf(os.Stderr, "  Provider: %s\n", cfg.Agent.Provider)
-			fmt.Fprintf(os.Stderr, "  Model: %s\n", cfg.Agent.Model)
-			fmt.Fprintf(os.Stderr, "  Reason: %v\n", err)
-			fmt.Println()
-			printFooter()
-			continue
-		}
-
-		sess.Messages = append(sess.Messages, agent.Message{Role: "assistant", Content: resp})
-
-		fmt.Printf("\n%s\n\n", resp)
-		printFooter()
-	}
-}
-
-func printSessionHeader(cfg *config.Config) {
-	provider := cfg.Agent.Provider
-	if provider == "" {
-		provider = "none"
-	}
-	model := cfg.Agent.Model
-	if model == "" {
-		model = "none"
-	}
-
-	fmt.Printf("  Provider : %s\n", provider)
-	fmt.Printf("  Model    : %s\n", model)
-	fmt.Printf("  Session  : default\n")
-	fmt.Println()
-}
-
-func printFooter() {
-	fmt.Printf("%s────────────────────────────────────────────────────%s\n", colorDim, colorReset)
-	fmt.Printf("%s  ctrl+p commands%s\n", colorDim, colorReset)
+	runBubbleTea(cfg, a)
 }
 
 func handleConfig(args []string) {
