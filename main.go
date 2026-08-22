@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/signal"
@@ -201,52 +200,79 @@ func runInteractive(cfg *config.Config, a *agent.Agent) {
 	palette := NewCommandPalette(registry, 70)
 	spinner := NewBrandSpinner("intimclaw", 120*time.Millisecond)
 	sess := &chatSession{Name: "default", Started: time.Now()}
-	reader := bufio.NewReader(os.Stdin)
+	editor := NewInputEditor(os.Stdin)
+	editor.EnableRawMode()
+	defer editor.DisableRawMode()
+
+	printFooter()
 
 	for {
-		// Print input box
-		fmt.Printf("%s┌─ You ────────────────────────────────────────%s\n", colorDim, colorReset)
-		fmt.Printf("%s│%s > ", colorDim, colorReset)
-
-		input, err := reader.ReadString('\n')
-		if err != nil {
+		input, exited := editor.ReadInput()
+		if exited {
 			fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
 			return
 		}
 		input = strings.TrimSpace(input)
 
-		// Close input box
-		fmt.Printf("%s└───────────────────────────────────────────────%s\n", colorDim, colorReset)
-
 		if input == "" {
-			fmt.Println()
 			continue
 		}
 
-		// Handle "/" prefix — show palette
-		if input == "/" {
-			palette.ShowAll()
-			fmt.Printf("%s> %s", colorDim, colorReset)
-			input, err = reader.ReadString('\n')
-			if err != nil {
-				fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
-				return
-			}
-			input = strings.TrimSpace(input)
-			if input == "" {
+		// Slash commands
+		if strings.HasPrefix(input, "/") {
+			if input == "/" {
+				// Show full palette, then read command
+				palette.ShowAll()
+				fmt.Printf("%s> %s", colorDim, colorReset)
+				cmdInput, exited := editor.ReadInput()
+				if exited {
+					fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
+					return
+				}
+				cmdInput = strings.TrimSpace(cmdInput)
+				fmt.Printf("%s└───────────────────────────────────────────────%s\n", colorDim, colorReset)
+				if cmdInput == "" {
+					fmt.Println()
+					continue
+				}
+				if registry.Execute(cmdInput, cfg, sess) {
+					return
+				}
 				fmt.Println()
 				continue
 			}
-			// Close the second input box
-			fmt.Printf("%s└───────────────────────────────────────────────%s\n", colorDim, colorReset)
-		}
-
-		// Handle slash commands
-		if strings.HasPrefix(input, "/") {
-			if registry.Execute(input, cfg, sess) {
-				return
+			// Check if it's a valid command
+			matches := registry.Match(input)
+			if len(matches) == 1 {
+				// Exact match — execute
+				if registry.Execute(input, cfg, sess) {
+					return
+				}
+				fmt.Println()
+			} else if len(matches) > 1 {
+				// Multiple matches — show palette
+				palette.Show(input)
+				fmt.Printf("%s> %s", colorDim, colorReset)
+				cmdInput, exited := editor.ReadInput()
+				if exited {
+					fmt.Printf("\n%sBye!%s\n", colorDim, colorReset)
+					return
+				}
+				cmdInput = strings.TrimSpace(cmdInput)
+				fmt.Printf("%s└───────────────────────────────────────────────%s\n", colorDim, colorReset)
+				if cmdInput == "" {
+					fmt.Println()
+					continue
+				}
+				if registry.Execute(cmdInput, cfg, sess) {
+					return
+				}
+				fmt.Println()
+			} else {
+				// No matches — show help
+				registry.Execute(input, cfg, sess)
+				fmt.Println()
 			}
-			fmt.Println()
 			continue
 		}
 
@@ -263,13 +289,14 @@ func runInteractive(cfg *config.Config, a *agent.Agent) {
 			fmt.Fprintf(os.Stderr, "  Model: %s\n", cfg.Agent.Model)
 			fmt.Fprintf(os.Stderr, "  Reason: %v\n", err)
 			fmt.Println()
+			printFooter()
 			continue
 		}
 
 		sess.Messages = append(sess.Messages, agent.Message{Role: "assistant", Content: resp})
 
-		// Print response
 		fmt.Printf("\n%s\n\n", resp)
+		printFooter()
 	}
 }
 
@@ -287,6 +314,11 @@ func printSessionHeader(cfg *config.Config) {
 	fmt.Printf("  Model    : %s\n", model)
 	fmt.Printf("  Session  : default\n")
 	fmt.Println()
+}
+
+func printFooter() {
+	fmt.Printf("%s────────────────────────────────────────────────────%s\n", colorDim, colorReset)
+	fmt.Printf("%s  ctrl+p commands%s\n", colorDim, colorReset)
 }
 
 func handleConfig(args []string) {
