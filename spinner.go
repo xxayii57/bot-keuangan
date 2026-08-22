@@ -10,14 +10,15 @@ import (
 
 // BrandSpinner is an animated activity indicator that highlights
 // characters of the "intimclaw" brand text on a single terminal line.
-// It starts on Start() and stops cleanly on Stop(), clearing the line.
+// It includes a thinking timer that shows elapsed duration.
 type BrandSpinner struct {
-	text    string
-	width   int
+	text     string
+	width    int
 	interval time.Duration
-	done    chan struct{}
-	running bool
-	mu      sync.Mutex
+	done     chan struct{}
+	running  bool
+	mu       sync.Mutex
+	startAt  time.Time
 }
 
 // NewBrandSpinner creates a spinner with the given brand text and tick interval.
@@ -31,7 +32,6 @@ func NewBrandSpinner(text string, interval time.Duration) *BrandSpinner {
 }
 
 // Start begins the animation loop in a background goroutine.
-// It is safe to call Stop() multiple times.
 func (s *BrandSpinner) Start() {
 	s.mu.Lock()
 	if s.running {
@@ -39,6 +39,7 @@ func (s *BrandSpinner) Start() {
 		return
 	}
 	s.running = true
+	s.startAt = time.Now()
 	s.done = make(chan struct{})
 	s.mu.Unlock()
 
@@ -74,16 +75,15 @@ func (s *BrandSpinner) animate() {
 				s.mu.Unlock()
 				return
 			}
-			s.renderFrame(pos)
+			elapsed := time.Since(s.startAt)
+			s.renderFrame(pos, elapsed)
 			s.mu.Unlock()
 			pos = (pos + 1) % s.width
 		}
 	}
 }
 
-func (s *BrandSpinner) renderFrame(pos int) {
-	// Build: text with highlighted character at pos
-	// Using ANSI: dim prefix + bold char + dim suffix
+func (s *BrandSpinner) renderFrame(pos int, elapsed time.Duration) {
 	var b strings.Builder
 
 	b.WriteString("\r\033[2K") // clear line
@@ -97,6 +97,23 @@ func (s *BrandSpinner) renderFrame(pos int) {
 		}
 	}
 
-	b.WriteString("  ")
+	b.WriteString(fmt.Sprintf("  %s•  Thinking %s%s", colorDim, formatDuration(elapsed), colorReset))
 	os.Stderr.WriteString(b.String())
+}
+
+func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	}
+	if d < time.Minute {
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	}
+	if d < time.Hour {
+		m := int(d.Minutes())
+		s := int(d.Seconds()) % 60
+		return fmt.Sprintf("%dm %02ds", m, s)
+	}
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	return fmt.Sprintf("%dh %02dm", h, m)
 }
