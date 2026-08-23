@@ -121,6 +121,7 @@ func clampMin(v, min int) int {
 
 func initialModel(cfg *config.Config, a *agent.Agent) model {
 	ti := textinput.New()
+	ti.Prompt = "> "
 	ti.Placeholder = "Ketik pesan..."
 	ti.Focus()
 	ti.CharLimit = 8192
@@ -172,9 +173,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.appendMessage(errText)
 			m.lastErr = msg.err.Error()
 		} else {
-			m.appendMessage(styleBotMsg.Render(msg.resp))
+			// Word-wrap bot response before adding to history
+			wrapped := wordwrap.String(msg.resp, clampMin(m.width-4, 20))
+			m.appendMessage(styleBotMsg.Render(wrapped))
 			m.lastErr = ""
 		}
+		// Return to input mode
 		m.phase = phaseInput
 		m.textinput.Focus()
 		m.updateLayout()
@@ -190,13 +194,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) appendMessage(msg string) {
-	// Update viewport content with word-wrapped message
 	m.updateLayout()
 	existing := m.viewport.View()
 	if existing == "" {
 		m.viewport.SetContent(msg)
 	} else {
-		m.viewport.SetContent(existing + "\n\n" + msg)
+		m.viewport.SetContent(existing + "\n" + msg)
 	}
 	m.viewport.GotoBottom()
 }
@@ -443,7 +446,7 @@ func (m model) viewSessionInfo() string {
 
 func (m model) viewInputBox() string {
 	w := clampMin(m.width-2, 20)
-	return styleInputBox.Width(w).Render("> " + m.textinput.View())
+	return styleInputBox.Width(w).Render(m.textinput.View())
 }
 
 func (m model) viewPalette() string {
