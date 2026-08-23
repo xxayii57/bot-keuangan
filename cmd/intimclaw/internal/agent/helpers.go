@@ -39,6 +39,12 @@ func agentCmd(message, sessionKey, model string, debug bool) error {
 		cfg.Agents.Defaults.ModelName = model
 	}
 
+	if cfg.Agents.Defaults.ModelName == "" || len(cfg.ModelList) == 0 {
+		return fmt.Errorf("no AI model is configured yet.\n\n" +
+			"Run the guided wizard to pick a provider, paste your API key,\n" +
+			"and choose a model interactively:\n\n  intimclaw model setup\n")
+	}
+
 	provider, modelID, err := providers.CreateProvider(cfg)
 	if err != nil {
 		return fmt.Errorf("error creating provider: %w", err)

@@ -26,6 +26,11 @@ available list online and pick one), use the 'add' subcommand:
 
   intimclaw model add --help
 
+For a fully guided experience (choose provider → paste API key →
+pick model), use:
+
+  intimclaw model setup
+
 Examples:
   intimclaw model                    # Show current default model
   intimclaw model gpt-5.2           # Set gpt-5.2 as default
@@ -58,6 +63,7 @@ Note: 'local-model' is a special value for using a local VLLM server
 	}
 
 	cmd.AddCommand(newAddCommand())
+	cmd.AddCommand(newSetupCommand())
 
 	return cmd
 }

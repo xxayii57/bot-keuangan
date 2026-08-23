@@ -118,6 +118,10 @@ func runAdd(opt addOptions) error {
 }
 
 func pickModel(stdin io.Reader, stdout io.Writer, entries []modelEntry) (string, error) {
+	return pickWithScanner(bufio.NewScanner(stdin), stdout, entries)
+}
+
+func pickWithScanner(scanner *bufio.Scanner, stdout io.Writer, entries []modelEntry) (string, error) {
 	fmt.Fprintf(stdout, "\n%d model(s) available:\n", len(entries))
 	for i, m := range entries {
 		line := m.ID
@@ -127,7 +131,6 @@ func pickModel(stdin io.Reader, stdout io.Writer, entries []modelEntry) (string,
 		fmt.Fprintf(stdout, "  %3d) %s\n", i+1, line)
 	}
 
-	scanner := bufio.NewScanner(stdin)
 	for {
 		fmt.Fprint(stdout, "Pick a model (number or id): ")
 		if !scanner.Scan() {

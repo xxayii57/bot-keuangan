@@ -24,21 +24,23 @@ func printOnboardPlain(logo string, encrypt bool, configPath string) {
 		fmt.Println("       export INTIMCLAW_KEY_PASSPHRASE=<your-passphrase>   # Linux/macOS")
 		fmt.Println("       set INTIMCLAW_KEY_PASSPHRASE=<your-passphrase>      # Windows cmd")
 		fmt.Println("")
-		fmt.Println("  2. Add your API key to", configPath)
+		fmt.Println("  2. Configure your AI model with the guided wizard:")
+		fmt.Println("       intimclaw model setup")
 	} else {
-		fmt.Println("  1. Add your API key to", configPath)
+		fmt.Println("  1. Configure your AI model with the guided wizard:")
+		fmt.Println("       intimclaw model setup")
 	}
 	fmt.Println("")
-	fmt.Println("     Recommended:")
-	fmt.Println("     - OpenRouter: https://openrouter.ai/keys (access 100+ models)")
-	fmt.Println("     - Ollama:     https://ollama.com (local, free)")
+	fmt.Println("     It walks you through choosing a provider, pasting your API key,")
+	fmt.Println("     and picking a model interactively.")
 	fmt.Println("")
-	fmt.Println("     See README.md for 17+ supported providers.")
+	fmt.Println("     Recommended: OpenRouter (https://openrouter.ai/keys, access 100+")
+	fmt.Println("     models) or Ollama (https://ollama.com, local & free, no key).")
 	fmt.Println("")
 	if encrypt {
-		fmt.Println("  3. Chat: intimclaw agent -m \"Hello!\"")
+		fmt.Println("  3. Chat: intimclaw agent")
 	} else {
-		fmt.Println("  2. Chat: intimclaw agent -m \"Hello!\"")
+		fmt.Println("  2. Chat: intimclaw agent")
 	}
 }
 
@@ -85,26 +87,23 @@ func buildOnboardingSteps(encrypt bool, configPath string) string {
 		b.WriteString("1. Set your encryption passphrase before starting intimclaw:\n")
 		b.WriteString("   export INTIMCLAW_KEY_PASSPHRASE=<your-passphrase>   # Linux/macOS\n")
 		b.WriteString("   set INTIMCLAW_KEY_PASSPHRASE=<your-passphrase>      # Windows cmd\n\n")
-		b.WriteString("2. Add your API key to\n   ")
-		b.WriteString(configPath)
-		b.WriteString("\n")
+		b.WriteString("2. Configure your AI model:\n   intimclaw model setup\n")
 	} else {
-		b.WriteString("1. Add your API key to\n   ")
-		b.WriteString(configPath)
-		b.WriteString("\n")
+		b.WriteString("1. Configure your AI model:\n   intimclaw model setup\n")
 	}
 	return b.String()
 }
 
 func recommendedBlock() string {
-	return "• OpenRouter: https://openrouter.ai/keys\n  (access 100+ models)\n\n" +
-		"• Ollama: https://ollama.com\n  (local, free)\n\n" +
-		"See README.md for 17+ supported providers."
+	return "The wizard asks for a provider, an API key, and lets you\n" +
+		"pick a model from the live list.\n\n" +
+		"• OpenRouter: https://openrouter.ai/keys\n  (access 100+ models)\n\n" +
+		"• Ollama: https://ollama.com\n  (local, free, no key needed)"
 }
 
 func chatStep(encrypt bool) string {
 	if encrypt {
-		return "3. Chat:\n   intimclaw agent -m \"Hello!\""
+		return "3. Chat:\n   intimclaw agent"
 	}
-	return "2. Chat:\n   intimclaw agent -m \"Hello!\""
+	return "2. Chat:\n   intimclaw agent"
 }
