@@ -39,6 +39,12 @@ var (
 	styleDimText = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("8"))
 
+	styleUserMsg = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("86"))
+
+	styleBotMsg = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("15"))
+
 	styleInputBox = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("62")).
@@ -86,7 +92,7 @@ type model struct {
 	phase       phase
 	width       int
 	height      int
-	lastResp    string
+	messages    []string // chat history rendered in View
 	lastErr     string
 	startAt     time.Time
 	paletteIdx  int
@@ -124,6 +130,7 @@ func initialModel(cfg *config.Config, a *agent.Agent) model {
 		session:   &chatSession{Name: "default", Started: time.Now()},
 		spinner:   sp,
 		phase:     phaseInput,
+		messages:  make([]string, 0),
 	}
 }
 
@@ -147,13 +154,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKey(msg)
 
 	case responseMsg:
-		m.lastResp = msg.resp
+		// Save agent response to history
 		if msg.err != nil {
+			errText := styleError.Render("✗ Error: " + msg.err.Error())
+			m.messages = append(m.messages, errText)
 			m.lastErr = msg.err.Error()
 		} else {
+			m.messages = append(m.messages, styleBotMsg.Render(msg.resp))
 			m.lastErr = ""
 		}
-		// KEY FIX: transition back to input phase and refocus textinput
+		// Return to input mode
 		m.phase = phaseInput
 		m.textinput.Focus()
 		return m, nil
@@ -194,8 +204,14 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if input == "" {
 			return m, nil
 		}
+
+		// Save user message to history
+		userLine := styleUserMsg.Render("┌─ You ─────────────────────────────\n│ > " + input + "\n└───────────────────────────────────")
+		m.messages = append(m.messages, userLine)
+
 		m.textinput.Reset()
 
+		// Slash command
 		if strings.HasPrefix(input, "/") {
 			return m.executeCommand(input)
 		}
@@ -297,12 +313,13 @@ func (m model) executeCommand(input string) (tea.Model, tea.Cmd) {
 	case "/exit", "/quit":
 		return m, tea.Quit
 	case "/clear":
-		return m, tea.ClearScreen
+		m.messages = nil
+		return m, nil
 	case "/new":
 		m.session.Messages = nil
 		m.session.Started = time.Now()
-		m.lastResp = "Session reset. History cleared."
-		m.phase = phaseResponse
+		m.messages = append(m.messages, styleBotMsg.Render("Session reset. History cleared."))
+		m.phase = phaseInput
 		m.textinput.Focus()
 		return m, nil
 	}
@@ -312,7 +329,6 @@ func (m model) executeCommand(input string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	// After command execution, return to input
 	m.phase = phaseInput
 	m.textinput.Focus()
 	return m, nil
@@ -330,18 +346,22 @@ func (m model) sendRequest(input string) tea.Cmd {
 func (m model) View() string {
 	var b strings.Builder
 
-	// Always show logo + session info at top
+	// Logo + session info
 	b.WriteString(m.viewLogo())
 	b.WriteString("\n")
 	b.WriteString(m.viewSessionInfo())
 	b.WriteString("\n")
 
+	// Chat history
+	if len(m.messages) > 0 {
+		b.WriteString(strings.Join(m.messages, "\n\n"))
+		b.WriteString("\n\n")
+	}
+
 	// Content area
 	switch m.phase {
 	case phaseThinking:
 		b.WriteString(m.viewThinking())
-	case phaseResponse:
-		b.WriteString(m.viewResponse())
 	case phasePalette:
 		b.WriteString(m.viewPalette())
 		b.WriteString(m.viewInputBox())
@@ -370,7 +390,7 @@ func (m model) viewSessionInfo() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("  %s● Online%s\n\n", styleOnline.Render(""), ""))
+	b.WriteString(fmt.Sprintf("  %s● Online%s\n\n", styleOnline.Render(), ""))
 	b.WriteString(fmt.Sprintf("  Provider : %s\n", provider))
 	b.WriteString(fmt.Sprintf("  Model    : %s\n", modelName))
 	b.WriteString(fmt.Sprintf("  Session  : %s\n", m.session.Name))
@@ -413,16 +433,6 @@ func (m model) viewThinking() string {
 	elapsed := time.Since(m.startAt)
 	sp := m.spinner.View()
 	return fmt.Sprintf("\n  %s  %s\n", sp, styleDimText.Render(fmt.Sprintf("Thinking %s", formatDuration(elapsed))))
-}
-
-func (m model) viewResponse() string {
-	if m.lastErr != "" {
-		return fmt.Sprintf("\n%s%s%s\n\n", styleError.Render("✗ "), styleError.Render("Request failed"), styleDimText.Render("\n"+m.lastErr))
-	}
-	if m.lastResp == "" {
-		return ""
-	}
-	return fmt.Sprintf("\n%s\n", m.lastResp)
 }
 
 func (m model) viewFooter() string {
