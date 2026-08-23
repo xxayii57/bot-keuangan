@@ -2,6 +2,8 @@
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj
 version: 2
 
+project_name: intimclaw
+
 git:
   ignore_tags:
     - nightly
