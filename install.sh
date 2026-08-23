@@ -69,7 +69,7 @@ case "$OS_NAME" in
         ;;
 esac
 
-ASSET="intimclaw_${OS_TITLE}_${ARCH}.tar.gz"
+ASSET_TARGZ="intimclaw_${OS_TITLE}_${ARCH}.tar.gz"
 CHECKSUMS="checksums.txt"
 
 # --- INSTALL DIRECTORY ---
@@ -84,39 +84,56 @@ TMP_DIR="$(mktemp -d)"
 cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
 
-# --- DOWNLOAD ---
-info "Mengunduh ${ASSET}..."
-HTTP_CODE=$(curl -fsSL -o "${TMP_DIR}/${ASSET}" -w "%{http_code}" "${DOWNLOAD_BASE}/${ASSET}") \
-    || fail "Gagal mengunduh ${ASSET} (HTTP ${HTTP_CODE:-000}). Kemungkinan belum ada release stabil. Cek: https://github.com/${GITHUB_REPO}/releases"
-
-info "Memverifikasi checksum..."
-if curl -fsSL -o "${TMP_DIR}/${CHECKSUMS}" "${DOWNLOAD_BASE}/${CHECKSUMS}" 2>/dev/null; then
-    EXPECTED=$(grep " ${ASSET}\$" "${TMP_DIR}/${CHECKSUMS}" | awk '{print $1}')
-    if [ -n "$EXPECTED" ]; then
-        ACTUAL=$(sha256sum "${TMP_DIR}/${ASSET}" | awk '{print $1}')
-        if [ "$EXPECTED" != "$ACTUAL" ]; then
-            fail "Checksum mismatch! Expected ${EXPECTED}, got ${ACTUAL}."
+verify_checksum() {
+    # $1 = file path, $2 = asset name
+    local f="$1" name="$2" expected actual
+    if curl -fsSL -o "${TMP_DIR}/${CHECKSUMS}" "${DOWNLOAD_BASE}/${CHECKSUMS}" 2>/dev/null; then
+        expected=$(grep " ${name}\$" "${TMP_DIR}/${CHECKSUMS}" | awk '{print $1}')
+        if [ -n "$expected" ]; then
+            actual=$(sha256sum "$f" | awk '{print $1}')
+            [ "$expected" = "$actual" ] || fail "Checksum mismatch! Expected ${expected}, got ${actual}."
+            ok "Checksum valid."
+            return
         fi
-        ok "Checksum valid."
+        warn "Aset tidak ditemukan di ${CHECKSUMS} — lewati verifikasi."
     else
-        warn "Aset tidak ditemukan di checksums.txt — lewati verifikasi."
+        warn "${CHECKSUMS} tidak tersedia — lewati verifikasi."
     fi
-else
-    warn "checksums.txt tidak tersedia — lewati verifikasi."
+}
+
+install_bins_from_dir() {
+    local installed=0
+    for BIN in intimclaw intimclaw-launcher; do
+        if [ -f "${TMP_DIR}/${BIN}" ]; then
+            install -m 0755 "${TMP_DIR}/${BIN}" "${INSTALL_DIR}/${BIN}"
+            ok "${BIN} terpasang."
+            installed=1
+        fi
+    done
+    [ "$installed" -eq 1 ] || fail "Binary tidak ditemukan di dalam arsip."
+}
+
+# --- DOWNLOAD: coba arsip tar.gz (goreleaser), lalu raw binary (legacy) ---
+RAW_ASSET="intimclaw-linux-${ARCH}"
+if [ "$IS_TERMUX" = true ]; then
+    RAW_ASSET="intimclaw-android-arm64"
 fi
 
-# --- EXTRACT & INSTALL ---
-info "Ekstrak dan instal ke ${INSTALL_DIR}..."
-tar -xzf "${TMP_DIR}/${ASSET}" -C "$TMP_DIR"
-
-for BIN in intimclaw intimclaw-launcher; do
-    if [ -f "${TMP_DIR}/${BIN}" ]; then
-        install -m 0755 "${TMP_DIR}/${BIN}" "${INSTALL_DIR}/${BIN}"
-        ok "${BIN} terpasang."
-    fi
-done
-
-[ -x "${INSTALL_DIR}/intimclaw" ] || fail "Binary 'intimclaw' tidak ditemukan di dalam arsip."
+info "Mengunduh ${ASSET_TARGZ}..."
+if curl -fsSL -o "${TMP_DIR}/${ASSET_TARGZ}" "${DOWNLOAD_BASE}/${ASSET_TARGZ}" 2>/dev/null; then
+    verify_checksum "${TMP_DIR}/${ASSET_TARGZ}" "${ASSET_TARGZ}"
+    info "Ekstrak dan instal ke ${INSTALL_DIR}..."
+    tar -xzf "${TMP_DIR}/${ASSET_TARGZ}" -C "$TMP_DIR"
+    install_bins_from_dir
+else
+    warn "Arsip tidak ditemukan — mencoba format lama (${RAW_ASSET})..."
+    HTTP_CODE=$(curl -fsSL -o "${TMP_DIR}/intimclaw-bin" -w "%{http_code}" "${DOWNLOAD_BASE}/${RAW_ASSET}") \
+        || fail "Gagal mengunduh (HTTP ${HTTP_CODE:-000}). Belum ada rilis yang cocok. Cek: https://github.com/${GITHUB_REPO}/releases"
+    verify_checksum "${TMP_DIR}/intimclaw-bin" "${RAW_ASSET}" \
+        || true
+    install -m 0755 "${TMP_DIR}/intimclaw-bin" "${INSTALL_DIR}/intimclaw"
+    ok "intimclaw terpasang."
+fi
 
 echo ""
 echo -e "${BLUE}=====================================================${NC}"
