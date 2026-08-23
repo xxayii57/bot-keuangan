@@ -102,39 +102,10 @@ builds:
       - goos: netbsd
         goarch: arm
 
-dockers_v2:
-  - id: intimclaw
-    dockerfile: docker/Dockerfile.goreleaser
-    extra_files:
-      - docker/entrypoint.sh
-    ids:
-      - intimclaw
-    images:
-      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/intimclaw"
-      - 'docker.io/{{ .Env.DOCKERHUB_IMAGE_NAME }}'
-    tags:
-      - '{{ if isEnvSet "NIGHTLY_BUILD" }}nightly{{ else }}{{ .Tag }}{{ end }}'
-      - '{{ if isEnvSet "NIGHTLY_BUILD" }}nightly{{ else }}latest{{ end }}'
-    platforms:
-      - linux/amd64
-      - linux/arm64
-      - linux/riscv64
-
-  - id: intimclaw-launcher
-    dockerfile: docker/Dockerfile.goreleaser.launcher
-    ids:
-      - intimclaw
-      - intimclaw-launcher
-    images:
-      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/intimclaw"
-      - 'docker.io/{{ .Env.DOCKERHUB_IMAGE_NAME }}'
-    tags:
-      - '{{ if isEnvSet "NIGHTLY_BUILD" }}nightly-launcher{{ else }}{{ .Tag }}-launcher{{ end }}'
-      - '{{ if isEnvSet "NIGHTLY_BUILD" }}nightly-launcher{{ else }}launcher{{ end }}'
-    platforms:
-      - linux/amd64
-      - linux/arm64
-      - linux/riscv64
+# Docker image publishing is disabled until DOCKERHUB_USERNAME /
+# DOCKERHUB_TOKEN secrets (and DOCKERHUB_REPOSITORY variable) are
+# configured. Re-add a dockers_v2 block mirroring the one removed in
+# commit "chore(release): disable docker publishing" to re-enable.
 
 notarize:
   macos:
