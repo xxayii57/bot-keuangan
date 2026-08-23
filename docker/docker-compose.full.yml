@@ -1,0 +1,44 @@
+services:
+  # ─────────────────────────────────────────────
+  # IntimClaw Agent (one-shot query) - Full MCP Support
+  #   docker compose -f docker/docker-compose.full.yml run --rm intimclaw-agent -m "Hello"
+  # ─────────────────────────────────────────────
+  intimclaw-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.full
+    container_name: intimclaw-agent-full
+    profiles:
+      - agent
+    volumes:
+      - ../config/config.json:/root/.intimclaw/config.json:ro
+      - intimclaw-workspace:/root/.intimclaw/workspace
+      - intimclaw-npm-cache:/root/.npm # npm cache for faster MCP server installs
+    entrypoint: ["intimclaw", "agent"]
+    stdin_open: true
+    tty: true
+
+  # ─────────────────────────────────────────────
+  # IntimClaw Gateway (Long-running Bot) - Full MCP Support
+  #   docker compose -f docker/docker-compose.full.yml --profile gateway up
+  # ─────────────────────────────────────────────
+  intimclaw-gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.full
+    container_name: intimclaw-gateway-full
+    restart: unless-stopped
+    profiles:
+      - gateway
+    volumes:
+      # Configuration file
+      - ../config/config.json:/root/.intimclaw/config.json:ro
+      # Persistent workspace (sessions, memory, logs)
+      - intimclaw-workspace:/root/.intimclaw/workspace
+      # NPM cache for faster MCP server installs
+      - intimclaw-npm-cache:/root/.npm
+    command: ["gateway"]
+
+volumes:
+  intimclaw-workspace:
+  intimclaw-npm-cache: # Cache npm packages to speed up MCP server installations

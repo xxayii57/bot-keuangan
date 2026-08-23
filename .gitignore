@@ -1,83 +1,76 @@
-# =================================================================
-# INTIMCLAW — .gitignore (Phase 1A Security Hardening)
-# Created: 2026-08-21
-# =================================================================
-
-# ===== SECRETS & ENVIRONMENT =====
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-*.p12
-*.pfx
-id_rsa
-id_rsa.*
-id_ed25519
-id_ed25519.*
-credentials.json
-credentials.*.json
-token.json
-*token*.json
-secrets/
-known_hosts
-
-# ===== SSH / SHELL HISTORY / PERSONAL DOTFILES =====
-.ssh/
-.bash_history
-.zsh_history
-.python_history
-.lesshst
-.gitconfig
-.bashrc
-.zshrc
-.npmrc
-.npm/
-.termux/
-
-# ===== CACHES & LOGS =====
-.cache/
-*.log
-logs/
-
-# ===== LOCAL DATABASES (data pribadi/user) =====
-# CATATAN: keuangan.db masih ter-track (LEGACY, keputusan untrack di Phase 2)
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-
-# ===== BUILD ARTIFACTS =====
-releases/
-dist/
+# Binaries
+# Go build artifacts
 bin/
-out/
-# CATATAN: IntimClaw_v3.apk masih ter-track (21MB, keputusan untrack di Phase 2)
-*.apk
-
-# ===== GO =====
+build/
+*.exe
+*.dll
+*.so
+*.dylib
 *.test
 *.out
-vendor/
+/picoclaw
+/picoclaw-test
+cmd/**/workspace
 
-# ===== NODE (backend/frontend legacy) =====
-node_modules/
+# Picoclaw specific
 
-# ===== PYTHON =====
-__pycache__/
-*.pyc
-.venv/
-venv/
+# PicoClaw
+.picoclaw/
+config.json
+sessions/
+build/
 
-# ===== OS / EDITOR JUNK =====
+# Coverage
+
+# Secrets & Config (keep templates, ignore actual secrets)
+.env
+config/config.json
+.security.yml
+onboard
+
+
+# Test
+coverage.txt
+coverage.html
+
+# OS
 .DS_Store
-Thumbs.db
-desktop.ini
-*.swp
-*.swo
-*~
-.idea/
-.vscode/
 
-# ===== CHAT LOGS / TRANSCRIPTS (berisi kredensial infra) =====
-/undangan-intim/chat_log.jsonl
+# Ralph workspace
+ralph/
+.ralph/
+tasks/
+
+# Plans
+docs/plans/
+docs/superpowers/
+
+# Editors
+.vscode/
+.idea/
+
+# Added by goreleaser init:
+dist/
+*.vite/
+
+# Windows Application Icon/Resource
+*.syso
+.cache/
+web/frontend/.pnpm-store/
+_tmp_*
+web/frontend/_tmp_*
+
+# Test telegram integration
+cmd/telegram/
+
+# Keep embedded backend dist directory placeholder in VCS
+!web/backend/dist/
+web/backend/dist/*
+!web/backend/dist/.gitkeep
+
+.claude/
+
+docker/data
+
+.omc/
+.worktrees/
