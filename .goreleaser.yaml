@@ -179,8 +179,6 @@ changelog:
 
 release:
   disable: '{{ isEnvSet "NIGHTLY_BUILD" }}'
-  extra_files:
-    - glob: ./build/intimclaw-android-universal.zip
   footer: >-
 
     ---
