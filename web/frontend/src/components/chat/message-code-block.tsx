@@ -110,7 +110,7 @@ export function MessageCodeBlock({
 
   return (
     <div
-      data-picoclaw-code-block=""
+      data-intimclaw-code-block=""
       className={cn(
         "not-prose my-4 overflow-hidden rounded-lg border border-[#d0d7de] bg-[#f6f8fa] text-[#24292f] shadow-xs dark:border-[#30363d] dark:bg-[#0d1117] dark:text-[#c9d1d9]",
         className,

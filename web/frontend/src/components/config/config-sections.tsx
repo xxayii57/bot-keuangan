@@ -122,7 +122,7 @@ export function AgentDefaultsSection({
         <Input
           value={form.workspace}
           onChange={(e) => onFieldChange("workspace", e.target.value)}
-          placeholder="~/.picoclaw/workspace"
+          placeholder="~/.intimclaw/workspace"
         />
       </Field>
 
@@ -444,7 +444,7 @@ export function EvolutionSection({
         <Input
           value={form.evolutionStateDir}
           onChange={(e) => onFieldChange("evolutionStateDir", e.target.value)}
-          placeholder="e.g. /var/lib/picoclaw/evolution"
+          placeholder="e.g. /var/lib/intimclaw/evolution"
         />
       </Field>
 
