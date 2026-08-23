@@ -195,12 +195,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *model) appendMessage(msg string) {
 	m.updateLayout()
+
+	// Collect all messages into a single string
 	existing := m.viewport.View()
+	var allMsgs string
 	if existing == "" {
-		m.viewport.SetContent(msg)
+		allMsgs = msg
 	} else {
-		m.viewport.SetContent(existing + "\n" + msg)
+		allMsgs = existing + "\n" + msg
 	}
+
+	// Word-wrap the combined content to fit viewport width
+	wrapWidth := clampMin(m.viewport.Width-2, 20)
+	wrappedContent := wordwrap.String(allMsgs, wrapWidth)
+
+	// Push content to bottom of viewport so messages stay compact
+	alignedContent := lipgloss.PlaceVertical(
+		m.viewport.Height,
+		lipgloss.Bottom,
+		wrappedContent,
+	)
+
+	m.viewport.SetContent(alignedContent)
 	m.viewport.GotoBottom()
 }
 
