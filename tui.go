@@ -101,6 +101,7 @@ type model struct {
 	phase       phase
 	width       int
 	height      int
+	messages    []string // raw message strings — source of truth for chat history
 	lastErr     string
 	startAt     time.Time
 	paletteIdx  int
@@ -162,6 +163,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.updateLayout()
+		m.refreshViewport()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -169,19 +171,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case responseMsg:
 		if msg.err != nil {
-			errText := styleError.Render("✗ Error: " + msg.err.Error())
-			m.appendMessage(errText)
+			m.addRawMessage(styleError.Render("✗ Error: " + msg.err.Error()))
 			m.lastErr = msg.err.Error()
 		} else {
-			// Word-wrap bot response before adding to history
-			wrapped := wordwrap.String(msg.resp, clampMin(m.width-4, 20))
-			m.appendMessage(styleBotMsg.Render(wrapped))
+			m.addRawMessage(styleBotMsg.Render(msg.resp))
 			m.lastErr = ""
 		}
-		// Return to input mode
 		m.phase = phaseInput
 		m.textinput.Focus()
 		m.updateLayout()
+		m.refreshViewport()
 		return m, nil
 
 	case spinner.TickMsg:
@@ -193,42 +192,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *model) appendMessage(msg string) {
+// addRawMessage appends a rendered message string to the messages slice
+// and refreshes the viewport content.
+func (m *model) addRawMessage(msg string) {
+	m.messages = append(m.messages, msg)
+	m.refreshViewport()
+}
+
+// refreshViewport rebuilds the viewport content from m.messages.
+// This is the SINGLE source of truth for what's shown in the viewport.
+func (m *model) refreshViewport() {
 	m.updateLayout()
 
-	// Collect all messages into a single string
-	existing := m.viewport.View()
-	var allMsgs string
-	if existing == "" {
-		allMsgs = msg
-	} else {
-		allMsgs = existing + "\n" + msg
+	if len(m.messages) == 0 {
+		m.viewport.SetContent("")
+		return
 	}
 
-	// Word-wrap the combined content to fit viewport width
-	wrapWidth := clampMin(m.viewport.Width-2, 20)
-	wrappedContent := wordwrap.String(allMsgs, wrapWidth)
+	// Join all messages with double newline
+	chatContent := strings.Join(m.messages, "\n\n")
 
-	// Push content to bottom of viewport so messages stay compact
-	alignedContent := lipgloss.PlaceVertical(
-		m.viewport.Height,
-		lipgloss.Bottom,
-		wrappedContent,
-	)
+	// Word-wrap to fit viewport width
+	wrapWidth := clampMin(m.viewport.Width-4, 20)
+	wrappedContent := wordwrap.String(chatContent, wrapWidth)
 
-	m.viewport.SetContent(alignedContent)
+	m.viewport.SetContent(wrappedContent)
 	m.viewport.GotoBottom()
 }
 
 func (m *model) updateLayout() {
-	headerHeight := 6 // logo + session info
-	footerHeight := 3 // separator + footer line + input box
+	headerHeight := 6
+	footerHeight := 3
 
 	if m.phase == phasePalette {
-		footerHeight += 5 // palette + input
+		footerHeight += 5
 	}
 	if m.phase == phaseThinking {
-		footerHeight += 1 // thinking line
+		footerHeight += 1
 	}
 
 	vpHeight := m.height - headerHeight - footerHeight
@@ -267,10 +267,8 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Wrap user message and add to viewport
-		wrapped := wordwrap.String(input, clampMin(m.width-8, 20))
-		userLine := styleUserMsg.Render(wrapped)
-		m.appendMessage(userLine)
+		// Add user message to messages slice
+		m.addRawMessage(styleUserMsg.Render(input))
 
 		m.textinput.Reset()
 
@@ -281,6 +279,7 @@ func (m model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.phase = phaseThinking
 		m.startAt = time.Now()
 		m.updateLayout()
+		m.refreshViewport()
 		return m, tea.Batch(m.spinner.Tick, m.sendRequest(input))
 
 	case tea.KeyTab:
@@ -373,6 +372,7 @@ func (m model) executeCommand(input string) (tea.Model, tea.Cmd) {
 		m.phase = phaseInput
 		m.textinput.Focus()
 		m.updateLayout()
+		m.refreshViewport()
 		return m, nil
 	}
 	cmd := strings.ToLower(parts[0])
@@ -381,9 +381,12 @@ func (m model) executeCommand(input string) (tea.Model, tea.Cmd) {
 	case "/exit", "/quit":
 		return m, tea.Quit
 	case "/clear":
+		m.messages = nil
 		m.viewport.SetContent("")
+		m.updateLayout()
 		return m, nil
 	case "/new":
+		m.messages = nil
 		m.session.Messages = nil
 		m.session.Started = time.Now()
 		m.viewport.SetContent("")
@@ -401,6 +404,7 @@ func (m model) executeCommand(input string) (tea.Model, tea.Cmd) {
 	m.phase = phaseInput
 	m.textinput.Focus()
 	m.updateLayout()
+	m.refreshViewport()
 	return m, nil
 }
 
@@ -416,7 +420,7 @@ func (m model) sendRequest(input string) tea.Cmd {
 func (m model) View() string {
 	var sections []string
 
-	// Header (fixed height)
+	// Header (fixed)
 	header := m.viewLogo() + "\n" + m.viewSessionInfo()
 	sections = append(sections, header)
 
@@ -435,7 +439,7 @@ func (m model) View() string {
 		sections = append(sections, m.viewPalette())
 	}
 
-	// Input box (always visible, anchored near bottom)
+	// Input box (always visible)
 	sections = append(sections, m.viewInputBox())
 
 	// Footer
