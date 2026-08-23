@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=IntimClaw Launcher
+Comment=Web-based configuration and management UI for IntimClaw
+Exec=intimclaw-launcher
+Icon=intimclaw-launcher
+Terminal=true
+Type=Application
+Categories=Utility;Network;
+Keywords=intimclaw;ai;agent;bot;
