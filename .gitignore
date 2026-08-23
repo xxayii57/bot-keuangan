@@ -16,17 +16,17 @@ cmd/**/workspace
 
 # PicoClaw
 .picoclaw/
-config.json
+/config.json
 sessions/
 build/
 
 # Coverage
 
 # Secrets & Config (keep templates, ignore actual secrets)
-.env
+/.env
 config/config.json
 .security.yml
-onboard
+.omc/
 
 
 # Test
