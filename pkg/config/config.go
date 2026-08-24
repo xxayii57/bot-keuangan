@@ -1141,6 +1141,34 @@ type ToolsConfig struct {
 	Subagent        ToolConfig         `json:"subagent"          yaml:"-"                                                       envPrefix:"INTIMCLAW_TOOLS_SUBAGENT_"`
 	WebFetch        ToolConfig         `json:"web_fetch"         yaml:"-"                                                       envPrefix:"INTIMCLAW_TOOLS_WEB_FETCH_"`
 	WriteFile       ToolConfig         `json:"write_file"        yaml:"-"                                                       envPrefix:"INTIMCLAW_TOOLS_WRITE_FILE_"`
+	SSH             SSHToolConfig      `json:"ssh"               yaml:"-"`
+	Approval        ApprovalConfig     `json:"approval"          yaml:"-"`
+}
+
+// SSHToolConfig configures the native ssh_exec tool.
+type SSHToolConfig struct {
+	ToolConfig   `                       envPrefix:"INTIMCLAW_TOOLS_SSH_"`
+	AllowedHosts []string                `json:"allowed_hosts"     env:"INTIMCLAW_TOOLS_SSH_ALLOWED_HOSTS"`
+	Credentials  []SSHHostCredential     `json:"credentials"       yaml:"-"`
+	DefaultUser  string                  `json:"default_user"      env:"INTIMCLAW_TOOLS_SSH_DEFAULT_USER"`
+	Port         int                     `json:"port"              env:"INTIMCLAW_TOOLS_SSH_PORT"`
+	TimeoutSeconds int                   `json:"timeout_seconds"   env:"INTIMCLAW_TOOLS_SSH_TIMEOUT_SECONDS"`
+}
+
+// SSHHostCredential stores credentials for one whitelisted SSH host.
+type SSHHostCredential struct {
+	Host     string       `json:"host"`
+	User     string       `json:"user,omitempty"`
+	Password SecureString `json:"password,omitzero"`
+	Port     int          `json:"port,omitempty"`
+}
+
+// ApprovalConfig configures the Telegram human-in-the-loop tool approval gate.
+type ApprovalConfig struct {
+	Enabled  bool     `json:"enabled"                    env:"INTIMCLAW_TOOLS_APPROVAL_ENABLED"`
+	Patterns []string `json:"patterns"                   env:"INTIMCLAW_TOOLS_APPROVAL_PATTERNS"`
+	ChatID   string   `json:"chat_id"                    env:"INTIMCLAW_TOOLS_APPROVAL_CHAT_ID"`
+	TimeoutSeconds int  `json:"timeout_seconds"          env:"INTIMCLAW_TOOLS_APPROVAL_TIMEOUT_SECONDS"`
 }
 
 // IsFilterSensitiveDataEnabled returns true if sensitive data filtering is enabled
@@ -1909,6 +1937,8 @@ func (t *ToolsConfig) IsToolEnabled(name string) bool {
 		return t.WriteFile.Enabled
 	case "mcp":
 		return t.MCP.Enabled
+	case "ssh":
+		return t.SSH.Enabled
 	default:
 		return true
 	}

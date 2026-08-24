@@ -9,12 +9,17 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
 
+	"github.com/mymmrac/telego"
+
+
 	"github.com/xxayii57/bot-keuangan/pkg/agent"
+	"github.com/xxayii57/bot-keuangan/pkg/agent/approval"
 	"github.com/xxayii57/bot-keuangan/pkg/audio/asr"
 	"github.com/xxayii57/bot-keuangan/pkg/audio/tts"
 	"github.com/xxayii57/bot-keuangan/pkg/bus"
@@ -464,6 +469,40 @@ func setupAndStartServices(
 
 	agentLoop.SetChannelManager(runningServices.ChannelManager)
 	agentLoop.SetMediaStore(runningServices.MediaStore)
+
+	// Telegram tool-approval gate (human-in-the-loop via inline keyboard)
+	if cfg.Tools.Approval.Enabled {
+		if ch, ok := runningServices.ChannelManager.GetChannel(config.ChannelTelegram); ok {
+			type botProvider interface{ Bot() *telego.Bot }
+			type callbackRegistrar interface {
+				SetCallbackHandler(func(string) bool)
+			}
+			tgCh, hasBot := ch.(botProvider)
+			registrar, hasRegistrar := ch.(callbackRegistrar)
+			if hasBot && hasRegistrar && tgCh.Bot() != nil {
+				chatID := strings.TrimSpace(cfg.Tools.Approval.ChatID)
+				var cid int64
+				if _, err := fmt.Sscanf(chatID, "%d", &cid); err == nil {
+					gate := approval.NewGate(approval.Options{
+						Bot:      tgCh.Bot(),
+						ChatID:   cid,
+						Patterns: cfg.Tools.Approval.Patterns,
+						Timeout:  time.Duration(cfg.Tools.Approval.TimeoutSeconds) * time.Second,
+					})
+					registrar.SetCallbackHandler(gate.HandleCallback)
+					if err := agentLoop.MountHook(agent.NamedHook("telegram-approval", gate)); err != nil {
+						logger.ErrorCF("approval", "failed to mount telegram approval gate", map[string]any{
+							"error": err.Error(),
+						})
+					} else {
+						fmt.Println("✓ Telegram tool-approval gate mounted")
+					}
+				} else {
+					logger.WarnC("approval", "tools.approval.chat_id is not a valid numeric chat id; gate not mounted")
+				}
+			}
+		}
+	}
 
 	transcriber := asr.DetectTranscriber(cfg)
 	if transcriber != nil {

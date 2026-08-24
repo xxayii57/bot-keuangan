@@ -160,6 +160,14 @@ func registerSharedTools(
 			agent.Tools.Register(tools.NewSerialTool())
 		}
 
+		// Remote SSH execution (whitelisted hosts from tools.ssh config)
+		if cfg.Tools.IsToolEnabled("ssh") {
+			sshTool := tools.NewSSHToolFromConfig(cfg)
+			if sshTool != nil {
+				agent.Tools.Register(sshTool)
+			}
+		}
+
 		// Message tool
 		if cfg.Tools.IsToolEnabled("message") {
 			messageTool := tools.NewMessageTool()

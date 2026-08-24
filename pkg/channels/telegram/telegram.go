@@ -61,6 +61,9 @@ type TelegramChannel struct {
 	tgCfg     *config.TelegramSettings
 	progress  *channels.ToolFeedbackAnimator
 
+	callbackMu      sync.Mutex
+	callbackHandler func(data string) bool
+
 	registerFunc      func(context.Context, []commands.Definition) error
 	commandRegDelayFn func(int) time.Duration
 	commandRegCancel  context.CancelFunc
@@ -68,6 +71,18 @@ type TelegramChannel struct {
 	mediaGroupMu    sync.Mutex
 	mediaGroups     map[string]*telegramMediaGroup
 	mediaGroupDelay time.Duration
+}
+
+// Bot exposes the underlying telego bot for in-process integrations such as
+// the Telegram tool-approval gate.
+func (c *TelegramChannel) Bot() *telego.Bot { return c.bot }
+
+// SetCallbackHandler registers a handler for raw callback-query data.
+// It returns true when the handler consumed the callback.
+func (c *TelegramChannel) SetCallbackHandler(fn func(data string) bool) {
+	c.callbackMu.Lock()
+	c.callbackHandler = fn
+	c.callbackMu.Unlock()
 }
 
 type telegramMediaGroup struct {
@@ -172,6 +187,21 @@ func (c *TelegramChannel) Start(ctx context.Context) error {
 	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
 		return c.handleMessage(ctx, &message)
 	}, th.AnyMessage())
+
+	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
+		if query.Data == "" {
+			return nil
+		}
+		c.callbackMu.Lock()
+		handler := c.callbackHandler
+		c.callbackMu.Unlock()
+		if handler != nil && handler(query.Data) {
+			answerParams := (&telego.AnswerCallbackQueryParams{CallbackQueryID: query.ID})
+			_ = c.bot.AnswerCallbackQuery(ctx, answerParams)
+			return nil
+		}
+		return nil
+	}, th.AnyCallbackQueryWithMessage())
 
 	c.SetRunning(true)
 	logger.InfoCF("telegram", "Telegram bot connected", map[string]any{

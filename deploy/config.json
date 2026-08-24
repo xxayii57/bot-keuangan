@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "agents": {
+    "defaults": {
+      "model_name": "free"
+    }
+  },
+  "model_list": [
+    {
+      "model_name": "free",
+      "model": "openrouter/poolside/laguna-s-2.1:free",
+      "api_base": "https://9router.intim.my.id/v1",
+      "api_keys": ["sk-249c09f2dd8b0637-moyei7-7ca287d1"],
+      "enabled": true
+    },
+    {
+      "model_name": "nemotron",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "api_base": "https://9router.intim.my.id/v1",
+      "api_keys": ["sk-249c09f2dd8b0637-moyei7-7ca287d1"],
+      "enabled": true
+    },
+    {
+      "model_name": "gemini",
+      "model": "gemini/gemini-3.6-flash",
+      "api_base": "https://9router.intim.my.id/v1",
+      "api_keys": ["sk-249c09f2dd8b0637-moyei7-7ca287d1"],
+      "enabled": true
+    },
+    {
+      "model_name": "opencode",
+      "model": "opencode",
+      "api_base": "https://9router.intim.my.id/v1",
+      "api_keys": ["sk-249c09f2dd8b0637-moyei7-7ca287d1"],
+      "enabled": true
+    }
+  ],
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "type": "telegram",
+      "allow_from": ["580132327"],
+      "settings": {
+        "token": "8939961188:AAGi3M0HYlvXW9WItd_ZFv8UYR3Yy3T-sRc",
+        "streaming": {
+          "enabled": true,
+          "throttle_seconds": 3,
+          "min_growth_chars": 200
+        }
+      }
+    }
+  },
+  "tools": {
+    "exec": {
+      "enabled": true,
+      "enable_deny_patterns": false,
+      "allow_remote": true,
+      "timeout_seconds": 60
+    },
+    "ssh": {
+      "enabled": true,
+      "default_user": "root",
+      "port": 22,
+      "timeout_seconds": 60,
+      "allowed_hosts": ["192.168.1.81"],
+      "credentials": [
+        {
+          "host": "192.168.1.81",
+          "user": "root",
+          "password": "AyiiGacor2026!!"
+        }
+      ]
+    },
+    "approval": {
+      "enabled": true,
+      "chat_id": "580132327",
+      "patterns": ["ssh_exec", "rm ", "systemctl ", "apt ", "npm install", "pip install", "kill ", "pkill"],
+      "timeout_seconds": 120
+    },
+    "mcp": {
+      "enabled": true,
+      "servers": {
+        "microclaw": {
+          "enabled": true,
+          "command": "python3",
+          "args": ["/root/microclaw/mcp_server.py"]
+        }
+      }
+    }
+  },
+  "hooks": {
+    "enabled": true
+  }
+}
