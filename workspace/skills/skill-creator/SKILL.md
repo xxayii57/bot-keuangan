@@ -269,7 +269,7 @@ Skip this step only if the skill being developed already exists. In that case, c
 Create user-installed Picoclaw skills under the workspace configured by Picoclaw: `<workspace>/skills/<skill-name>/`. If Picoclaw is configured to use a non-default workspace, set `WORKSPACE` to that path instead.
 
 ```bash
-WORKSPACE="$HOME/.picoclaw/workspace"
+WORKSPACE="$HOME/.intimclaw/workspace"
 mkdir -p "$WORKSPACE/skills/my-skill"
 cat > "$WORKSPACE/skills/my-skill/SKILL.md" <<'EOF'
 ---

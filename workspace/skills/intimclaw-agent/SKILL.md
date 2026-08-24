@@ -1,51 +1,51 @@
 ---
-name: picoclaw-agent
-description: "Configure, extend, debug, or contribute to PicoClaw itself. Use when the task is about PicoClaw CLI commands, config.json, gateway, auth, models, skills, MCP servers, cron, routing, sessions, self-evolution, built-in slash commands, or repository internals. Use PicoClaw-native workflows, terminology, paths, and configuration."
+name: intimclaw-agent
+description: "Configure, extend, debug, or contribute to IntimClaw itself. Use when the task is about IntimClaw CLI commands, config.json, gateway, auth, models, skills, MCP servers, cron, routing, sessions, self-evolution, built-in slash commands, or repository internals. Use IntimClaw-native workflows, terminology, paths, and configuration."
 metadata: {"nanobot":{"emoji":"🦞"}}
 ---
 
-# PicoClaw Agent
+# IntimClaw Agent
 
-PicoClaw is a lightweight personal AI assistant and agent framework with a native CLI, chat gateway, MCP integration, installable skills, session routing, scheduled jobs, and self-evolution.
+IntimClaw is a lightweight personal AI assistant and agent framework with a native CLI, chat gateway, MCP integration, installable skills, session routing, scheduled jobs, and self-evolution.
 
-Use this skill when the job is about **PicoClaw itself**: onboarding, configuration, debugging, adding features, extending the CLI, changing routing/session behavior, working on skills or MCP support, or contributing to this repository.
+Use this skill when the job is about **IntimClaw itself**: onboarding, configuration, debugging, adding features, extending the CLI, changing routing/session behavior, working on skills or MCP support, or contributing to this repository.
 
 ## Operating Stance
 
-When this skill is active, stay fully subordinate to PicoClaw's real architecture:
+When this skill is active, stay fully subordinate to IntimClaw's real architecture:
 
-- Prefer PicoClaw commands, config keys, workspace layout, and docs.
-- Follow PicoClaw source and docs for behavior, naming, and workflows.
+- Prefer IntimClaw commands, config keys, workspace layout, and docs.
+- Follow IntimClaw source and docs for behavior, naming, and workflows.
 - Treat repository code and checked-in docs as the source of truth.
 
 ## Quick Start
 
 ```bash
-# Initialize ~/.picoclaw/config.json and ~/.picoclaw/workspace
-picoclaw onboard
+# Initialize ~/.intimclaw/config.json and ~/.intimclaw/workspace
+intimclaw onboard
 
 # Authenticate a provider
-picoclaw auth login --provider openai
+intimclaw auth login --provider openai
 
 # Inspect or switch the default model
-picoclaw model
-picoclaw model my-default-model
+intimclaw model
+intimclaw model my-default-model
 
 # One-shot prompt
-picoclaw agent -m "Hello"
+intimclaw agent -m "Hello"
 
 # Interactive CLI chat
-picoclaw agent
+intimclaw agent
 
 # Start the gateway for chat channels
-picoclaw gateway
+intimclaw gateway
 
 # Inspect runtime/config health
-picoclaw status
+intimclaw status
 
 # Explore installed skills and MCP servers
-picoclaw skills list
-picoclaw mcp list
+intimclaw skills list
+intimclaw mcp list
 ```
 
 ## Command Surface
@@ -54,120 +54,120 @@ picoclaw mcp list
 ### Core CLI
 
 ```bash
-picoclaw onboard
-picoclaw agent [-m MESSAGE] [--session KEY] [--model MODEL] [--debug]
-picoclaw gateway [--debug] [--no-truncate] [--allow-empty] [--host HOST]
-picoclaw status
-picoclaw version
-picoclaw migrate
+intimclaw onboard
+intimclaw agent [-m MESSAGE] [--session KEY] [--model MODEL] [--debug]
+intimclaw gateway [--debug] [--no-truncate] [--allow-empty] [--host HOST]
+intimclaw status
+intimclaw version
+intimclaw migrate
 ```
 
 ### Configuration and Models
 
 ```bash
 # Show or change the default configured model alias
-picoclaw model
-picoclaw model <model_name>
+intimclaw model
+intimclaw model <model_name>
 
 # Add a model from an OpenAI-compatible endpoint
-picoclaw model add --api-base URL --api-key KEY
-picoclaw model add -b http://localhost:8000/v1 -k dummy -m my-model -n local
+intimclaw model add --api-base URL --api-key KEY
+intimclaw model add -b http://localhost:8000/v1 -k dummy -m my-model -n local
 
 # Reset config to factory defaults (preserves sensitive keys)
-picoclaw config reset
-picoclaw config reset --force
+intimclaw config reset
+intimclaw config reset --force
 ```
 
 Notes:
 
-- There is **no** general `picoclaw config edit` or `picoclaw config set`.
-- Advanced edits are usually done by editing `~/.picoclaw/config.json` directly.
+- There is **no** general `intimclaw config edit` or `intimclaw config set`.
+- Advanced edits are usually done by editing `~/.intimclaw/config.json` directly.
 
 ### Authentication
 
 ```bash
-picoclaw auth login --provider openai
-picoclaw auth login --provider anthropic --setup-token
-picoclaw auth login --provider antigravity --device-code
-picoclaw auth models
-picoclaw auth status
-picoclaw auth logout --provider openai
-picoclaw auth weixin
-picoclaw auth wecom --timeout 10m
+intimclaw auth login --provider openai
+intimclaw auth login --provider anthropic --setup-token
+intimclaw auth login --provider antigravity --device-code
+intimclaw auth models
+intimclaw auth status
+intimclaw auth logout --provider openai
+intimclaw auth weixin
+intimclaw auth wecom --timeout 10m
 ```
 
 ### Skills
 
 ```bash
-picoclaw skills list
-picoclaw skills show <name>
-picoclaw skills search "query"
-picoclaw skills install owner/repo/path
-picoclaw skills install --registry clawhub <slug>
-picoclaw skills remove <name>
-picoclaw skills list-builtin
-picoclaw skills install-builtin
+intimclaw skills list
+intimclaw skills show <name>
+intimclaw skills search "query"
+intimclaw skills install owner/repo/path
+intimclaw skills install --registry clawhub <slug>
+intimclaw skills remove <name>
+intimclaw skills list-builtin
+intimclaw skills install-builtin
 ```
 
 Skill loading priority is:
 
-1. `~/.picoclaw/workspace/skills`
-2. `~/.picoclaw/skills`
+1. `~/.intimclaw/workspace/skills`
+2. `~/.intimclaw/skills`
 3. builtin embedded skills
 
 ### MCP
 
 ```bash
-picoclaw mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem /tmp
-picoclaw mcp add --deferred github --env-file .env.github -- npx -y @modelcontextprotocol/server-github
-picoclaw mcp list
-picoclaw mcp list --status
-picoclaw mcp show github
-picoclaw mcp test github
-picoclaw mcp edit
-picoclaw mcp remove github
+intimclaw mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem /tmp
+intimclaw mcp add --deferred github --env-file .env.github -- npx -y @modelcontextprotocol/server-github
+intimclaw mcp list
+intimclaw mcp list --status
+intimclaw mcp show github
+intimclaw mcp test github
+intimclaw mcp edit
+intimclaw mcp remove github
 ```
 
 Notes:
 
-- `picoclaw mcp` is a **configuration manager** for `tools.mcp.servers`.
+- `intimclaw mcp` is a **configuration manager** for `tools.mcp.servers`.
 - It does **not** keep servers running by itself; the host/gateway loads them later.
 
 ### Cron
 
 ```bash
-picoclaw cron list
-picoclaw cron add --name "Daily summary" --message "Summarize today's logs" --cron "0 18 * * *"
-picoclaw cron add --name "Ping" --message "heartbeat" --every 300 --deliver
-picoclaw cron enable <job-id>
-picoclaw cron disable <job-id>
-picoclaw cron remove <job-id>
+intimclaw cron list
+intimclaw cron add --name "Daily summary" --message "Summarize today's logs" --cron "0 18 * * *"
+intimclaw cron add --name "Ping" --message "heartbeat" --every 300 --deliver
+intimclaw cron enable <job-id>
+intimclaw cron disable <job-id>
+intimclaw cron remove <job-id>
 ```
 
 Notes:
 
-- The current CLI `picoclaw cron add` supports recurring jobs only: `--every` or `--cron`.
+- The current CLI `intimclaw cron add` supports recurring jobs only: `--every` or `--cron`.
 - One-shot `at_seconds` jobs exist in the cron system, but not as a first-class CLI flag today.
 
 ## Providers
 
-PicoClaw supports 30+ LLM providers through `model_list`.
+IntimClaw supports 30+ LLM providers through `model_list`.
 
-Credential patterns in PicoClaw are:
+Credential patterns in IntimClaw are:
 
 - `model_list[].api_keys` for most hosted APIs
-- `picoclaw auth login --provider ...` for the built-in auth helper flows (`openai`, `anthropic`, `antigravity`)
+- `intimclaw auth login --provider ...` for the built-in auth helper flows (`openai`, `anthropic`, `antigravity`)
 - local or self-hosted endpoints for providers like `ollama`, `lmstudio`, `vllm`, and `litellm`
 - external platform credentials for providers like `bedrock`, `azure`, and `github-copilot`
 
-`picoclaw auth login` does **not** cover every provider. For most providers, the normal path is adding a `model_list` entry with `provider`, `model`, and `api_keys`.
+`intimclaw auth login` does **not** cover every provider. For most providers, the normal path is adding a `model_list` entry with `provider`, `model`, and `api_keys`.
 
 ### Common Provider Matrix
 
-| Provider | `provider` value | Auth path in PicoClaw |
+| Provider | `provider` value | Auth path in IntimClaw |
 | --- | --- | --- |
-| OpenAI | `openai` | OAuth helper via `picoclaw auth login --provider openai`, or `model_list[].api_keys` |
-| Anthropic | `anthropic` | API key in `model_list[].api_keys`, or helper flow via `picoclaw auth login --provider anthropic` |
+| OpenAI | `openai` | OAuth helper via `intimclaw auth login --provider openai`, or `model_list[].api_keys` |
+| Anthropic | `anthropic` | API key in `model_list[].api_keys`, or helper flow via `intimclaw auth login --provider anthropic` |
 | Anthropic Messages API | `anthropic-messages` | API key in `model_list[].api_keys` |
 | Google Gemini | `gemini` | API key in `model_list[].api_keys` |
 | OpenRouter | `openrouter` | API key in `model_list[].api_keys` |
@@ -183,7 +183,7 @@ Credential patterns in PicoClaw are:
 | Cerebras | `cerebras` | API key in `model_list[].api_keys` |
 | Azure OpenAI | `azure` | `api_key` in `model_list`, or Microsoft Entra ID if built with `azidentity` support |
 | AWS Bedrock | `bedrock` | AWS credentials plus Bedrock-enabled build (`go build -tags bedrock`) |
-| Antigravity | `antigravity` | OAuth helper via `picoclaw auth login --provider antigravity` |
+| Antigravity | `antigravity` | OAuth helper via `intimclaw auth login --provider antigravity` |
 | GitHub Copilot | `github-copilot` | External Copilot gRPC endpoint, default `localhost:4321` |
 | Ollama | `ollama` | Local endpoint, no API key required |
 | LM Studio | `lmstudio` | Local endpoint, API key optional |
@@ -194,7 +194,7 @@ Credential patterns in PicoClaw are:
 
 ### Additional OpenAI-Compatible Vendors
 
-PicoClaw also carries first-class metadata or routing support for additional vendors such as:
+IntimClaw also carries first-class metadata or routing support for additional vendors such as:
 
 - `venice`
 - `vivgrid`
@@ -212,7 +212,7 @@ For the full provider matrix, default API bases, protocol families, and vendor-s
 
 ## Built-in Tool Families
 
-PicoClaw tools are configured under `tools` in `config.json` and registered dynamically at runtime.
+IntimClaw tools are configured under `tools` in `config.json` and registered dynamically at runtime.
 
 Important activation rules:
 
@@ -249,7 +249,7 @@ For per-tool configuration, read `docs/reference/tools_configuration.md`.
 
 ## Specialized Subagents and Spawn
 
-PicoClaw has a first-class subagent model for long-running work, isolated subproblems, and multi-agent specialization.
+IntimClaw has a first-class subagent model for long-running work, isolated subproblems, and multi-agent specialization.
 
 The core idea is:
 
@@ -310,7 +310,7 @@ skills: [deep-research]
 
 ### Automatic Agent Discovery
 
-When an agent has the `spawn` tool and at least one allowed peer, PicoClaw injects a lightweight agent registry into the system prompt automatically.
+When an agent has the `spawn` tool and at least one allowed peer, IntimClaw injects a lightweight agent registry into the system prompt automatically.
 
 That means:
 
@@ -366,7 +366,7 @@ Background specialist research:
 
 ```text
 spawn(
-  task="Search the web for the latest PicoClaw MCP integration patterns and summarize them.",
+  task="Search the web for the latest IntimClaw MCP integration patterns and summarize them.",
   label="mcp-research",
   agent_id="research"
 )
@@ -398,7 +398,7 @@ For live visibility:
 
 ## Voice, Transcription, and TTS
 
-PicoClaw can transcribe inbound audio and synthesize outbound speech, but voice setup is model-driven like the rest of the runtime.
+IntimClaw can transcribe inbound audio and synthesize outbound speech, but voice setup is model-driven like the rest of the runtime.
 
 The important pattern is:
 
@@ -448,16 +448,16 @@ model_list:
 | --- | --- | --- |
 | Groq Whisper | `groq/whisper-large-v3-turbo` | Fast OpenAI-compatible Whisper transcription and a common default choice |
 | OpenAI Whisper | `openai/whisper-1` | Standard Whisper transcription through the OpenAI-compatible audio endpoint |
-| ElevenLabs Scribe | `provider: elevenlabs`, `model: scribe_v1` | Uses PicoClaw's dedicated ElevenLabs transcription path |
+| ElevenLabs Scribe | `provider: elevenlabs`, `model: scribe_v1` | Uses IntimClaw's dedicated ElevenLabs transcription path |
 | Audio-capable chat models | `gemini/gemini-2.5-flash`, `openai/gpt-4o-audio-preview` | Multimodal audio transcription path; some model combinations are still evolving |
 
 Detection behavior that matters:
 
 - `voice.model_name` is the preferred and recommended path
-- if it resolves to an ElevenLabs model, PicoClaw uses the ElevenLabs transcriber
-- if it resolves to a Whisper-compatible model, PicoClaw uses the Whisper transcription path
-- if it resolves to an audio-capable multimodal model, PicoClaw can use audio-model transcription
-- if `voice.model_name` is omitted, PicoClaw still performs compatibility scanning across `model_list` for legacy auto-detected ASR entries
+- if it resolves to an ElevenLabs model, IntimClaw uses the ElevenLabs transcriber
+- if it resolves to a Whisper-compatible model, IntimClaw uses the Whisper transcription path
+- if it resolves to an audio-capable multimodal model, IntimClaw can use audio-model transcription
+- if `voice.model_name` is omitted, IntimClaw still performs compatibility scanning across `model_list` for legacy auto-detected ASR entries
 
 ### TTS (Text -> Voice)
 
@@ -527,22 +527,22 @@ model_list:
 
 | Provider path | Example model | Notes |
 | --- | --- | --- |
-| OpenAI-compatible speech | `openai/tts-1` | Best-supported path; PicoClaw sends an OpenAI-style `/audio/speech` request |
+| OpenAI-compatible speech | `openai/tts-1` | Best-supported path; IntimClaw sends an OpenAI-style `/audio/speech` request |
 | Xiaomi MiMo | `mimo/mimo-v2-tts` | Dedicated MiMo TTS provider path with MP3 output |
 
 Operational notes:
 
 - the preferred selection path is `voice.tts_model_name`
-- if that is missing, PicoClaw can still scan `model_list` for the first API-backed model whose ID contains `tts`
+- if that is missing, IntimClaw can still scan `model_list` for the first API-backed model whose ID contains `tts`
 - the current OpenAI-style TTS request defaults to `voice: alloy` and `response_format: opus`
 - you can override `voice` and `response_format` for a specific TTS model through `model_list[].extra_body`
-- if a provider rejects `response_format`, PicoClaw retries once without that field
+- if a provider rejects `response_format`, IntimClaw retries once without that field
 - `send_tts` is only registered when TTS detection succeeds
 
 
 ## In-Session Slash Commands
 
-PicoClaw's shared slash command registry lives under `pkg/commands`.
+IntimClaw's shared slash command registry lives under `pkg/commands`.
 
 Use these when helping users inside chat channels:
 
@@ -580,19 +580,19 @@ Telegram auto-registers supported top-level commands like `/start`, `/help`, `/s
 ### Important Files
 
 ```text
-~/.picoclaw/config.json          Main config
-~/.picoclaw/.security.yml       Sensitive values stored outside config.json
-~/.picoclaw/auth.json           OAuth/token store
-~/.picoclaw/workspace/          Default workspace
-~/.picoclaw/workspace/skills/   Workspace skills
-~/.picoclaw/workspace/sessions/ Session history
-~/.picoclaw/workspace/cron/     Scheduled jobs store
+~/.intimclaw/config.json          Main config
+~/.intimclaw/.security.yml       Sensitive values stored outside config.json
+~/.intimclaw/auth.json           OAuth/token store
+~/.intimclaw/workspace/          Default workspace
+~/.intimclaw/workspace/skills/   Workspace skills
+~/.intimclaw/workspace/sessions/ Session history
+~/.intimclaw/workspace/cron/     Scheduled jobs store
 ```
 
 Default workspace layout:
 
 ```text
-~/.picoclaw/workspace/
+~/.intimclaw/workspace/
 ├── sessions/
 ├── memory/
 ├── state/
@@ -609,7 +609,7 @@ Default workspace layout:
 
 ```bash
 PICOCLAW_CONFIG=/path/to/config.json
-PICOCLAW_HOME=/path/to/picoclaw-home
+PICOCLAW_HOME=/path/to/intimclaw-home
 PICOCLAW_BUILTIN_SKILLS=/path/to/custom-builtin-skills
 PICOCLAW_LOG_LEVEL=debug
 PICOCLAW_GATEWAY_HOST=0.0.0.0
@@ -618,11 +618,11 @@ PICOCLAW_GATEWAY_HOST=0.0.0.0
 Use `PICOCLAW_CONFIG` when the user reports "wrong config file" behavior.
 Use `PICOCLAW_HOME` when the user wants a portable or service-managed install.
 
-## PicoClaw-Native Concepts
+## IntimClaw-Native Concepts
 
 ### Model Configuration
 
-PicoClaw is model-centric. The key fields are:
+IntimClaw is model-centric. The key fields are:
 
 - `agents.defaults.model_name`
 - `model_list`
@@ -632,7 +632,7 @@ PicoClaw is model-centric. The key fields are:
 Important behavior:
 
 - `agents.defaults.model_name` must match a `model_name` entry in `model_list`.
-- If `provider` is set, PicoClaw sends `model` to that provider unchanged.
+- If `provider` is set, IntimClaw sends `model` to that provider unchanged.
 - If `provider` is omitted, legacy `provider/model` parsing is still supported.
 
 ### Sessions and Routing
@@ -672,16 +672,16 @@ Prefer this format:
 workspace/skills/<skill-name>/SKILL.md
 ```
 
-PicoClaw only relies on `name` and `description` frontmatter fields for loading and matching.
+IntimClaw only relies on `name` and `description` frontmatter fields for loading and matching.
 
 ### MCP Discovery
 
-PicoClaw supports always-loaded and deferred MCP tools.
+IntimClaw supports always-loaded and deferred MCP tools.
 
 Use:
 
 - `--deferred` when tools should stay hidden until explicitly discovered
-- `picoclaw mcp show <name>` to inspect active tools
+- `intimclaw mcp show <name>` to inspect active tools
 - `/list mcp` and `/show mcp <server>` from chat channels when debugging live agents
 
 ### Self-Evolution
@@ -706,15 +706,15 @@ Notes:
 
 ## Debugging Workflow
 
-Start with the most PicoClaw-native path:
+Start with the most IntimClaw-native path:
 
-1. Check `picoclaw status`.
+1. Check `intimclaw status`.
 2. Confirm which config file is active.
 3. Inspect `agents.defaults.model_name` and `model_list`.
-4. Run `picoclaw gateway --debug` for runtime visibility.
+4. Run `intimclaw gateway --debug` for runtime visibility.
 5. Add `--no-truncate` only when full prompt or tool payload inspection is necessary.
 6. For skill issues, inspect the skill directory and frontmatter.
-7. For MCP issues, use `picoclaw mcp list`, `show`, and `test`.
+7. For MCP issues, use `intimclaw mcp list`, `show`, and `test`.
 8. For routing/session issues, inspect `session.dimensions` and `agents.dispatch.rules`.
 
 Useful runtime facts:
@@ -725,11 +725,11 @@ Useful runtime facts:
 
 ### Where to Find Logs
 
-For gateway and runtime debugging, PicoClaw writes logs under its home directory:
+For gateway and runtime debugging, IntimClaw writes logs under its home directory:
 
 ```text
-~/.picoclaw/logs/gateway.log
-~/.picoclaw/logs/gateway_panic.log
+~/.intimclaw/logs/gateway.log
+~/.intimclaw/logs/gateway_panic.log
 ```
 
 If `PICOCLAW_HOME` is overridden, use:
@@ -741,34 +741,34 @@ $PICOCLAW_HOME/logs/gateway_panic.log
 
 In practice, check these places first:
 
-- `~/.picoclaw/logs/` for persisted gateway logs
-- the terminal running `picoclaw gateway` or `picoclaw agent`
+- `~/.intimclaw/logs/` for persisted gateway logs
+- the terminal running `intimclaw gateway` or `intimclaw agent`
 - Docker stdout/stderr via `docker compose -f docker/docker-compose.yml logs -f`
-- launcher or service logs if PicoClaw is being run under another supervisor
+- launcher or service logs if IntimClaw is being run under another supervisor
 
 Useful controls:
 
-- `picoclaw gateway --debug` for detailed runtime logs
-- `picoclaw gateway --debug --no-truncate` for full prompt/tool payload inspection
+- `intimclaw gateway --debug` for detailed runtime logs
+- `intimclaw gateway --debug --no-truncate` for full prompt/tool payload inspection
 - `gateway.log_level` or `PICOCLAW_LOG_LEVEL` to raise verbosity to `debug` or `info`
 
 Special case:
 
-- the standalone `picoclaw agent` command uses console logging unless `PICOCLAW_LOG_FILE` is set explicitly
+- the standalone `intimclaw agent` command uses console logging unless `PICOCLAW_LOG_FILE` is set explicitly
 - process hooks can write JSONL file logs when `PICOCLAW_HOOK_LOG_FILE` is set; this is hook-specific and separate from the main gateway log path
 
 ## Repository Map
 
 When contributing code, these paths matter most:
 
-- `cmd/picoclaw/main.go` — root CLI wiring
-- `cmd/picoclaw/internal/agent/` — direct CLI agent command
-- `cmd/picoclaw/internal/gateway/` — gateway startup and flags
-- `cmd/picoclaw/internal/auth/` — auth flows, QR onboarding
-- `cmd/picoclaw/internal/model/` — default model switching and `model add`
-- `cmd/picoclaw/internal/skills/` — install/list/show/remove/search commands
-- `cmd/picoclaw/internal/mcp/` — MCP CLI configuration manager
-- `cmd/picoclaw/internal/cron/` — cron CLI
+- `cmd/intimclaw/main.go` — root CLI wiring
+- `cmd/intimclaw/internal/agent/` — direct CLI agent command
+- `cmd/intimclaw/internal/gateway/` — gateway startup and flags
+- `cmd/intimclaw/internal/auth/` — auth flows, QR onboarding
+- `cmd/intimclaw/internal/model/` — default model switching and `model add`
+- `cmd/intimclaw/internal/skills/` — install/list/show/remove/search commands
+- `cmd/intimclaw/internal/mcp/` — MCP CLI configuration manager
+- `cmd/intimclaw/internal/cron/` — cron CLI
 - `pkg/commands/` — shared slash command registry
 - `pkg/agent/` — prompt assembly, sessions, routing, tool execution, hooks
 - `pkg/skills/` — skill loading, metadata, registry installs
@@ -784,7 +784,7 @@ When contributing code, these paths matter most:
 
 ## Contribution Rules
 
-When changing PicoClaw:
+When changing IntimClaw:
 
 - Prefer extending existing CLI groups and shared registries instead of adding parallel one-off flows.
 - Keep docs aligned with code for CLI flags, slash commands, and config behavior.
@@ -801,7 +801,7 @@ Check that:
 
 - `agents.defaults.model_name` matches a configured `model_name`
 - the target `model_list` entry is enabled
-- the `provider` and `model` fields use PicoClaw's model-centric rules
+- the `provider` and `model` fields use IntimClaw's model-centric rules
 
 ### OpenRouter `free is not a valid model ID`
 
@@ -838,8 +838,8 @@ Check:
 - `tools.mcp.enabled` is true
 - the server is enabled
 - deferred discovery settings match expectations
-- `picoclaw mcp test <name>` succeeds
-- `/show mcp <server>` or `picoclaw mcp show <name>` exposes tools
+- `intimclaw mcp test <name>` succeeds
+- `/show mcp <server>` or `intimclaw mcp show <name>` exposes tools
 
 ### Agent remembers too much or too little
 
@@ -870,4 +870,4 @@ Read these only when the task needs them:
 - `docs/operations/debug.md` for runtime inspection
 - `docs/operations/troubleshooting.md` for common provider/model mistakes
 
-If the task is code-level rather than user-facing, read the matching package under `cmd/picoclaw/internal/`, `pkg/commands/`, `pkg/agent/`, `pkg/skills/`, or `pkg/mcp/` before proposing behavior changes.
+If the task is code-level rather than user-facing, read the matching package under `cmd/intimclaw/internal/`, `pkg/commands/`, `pkg/agent/`, `pkg/skills/`, or `pkg/mcp/` before proposing behavior changes.

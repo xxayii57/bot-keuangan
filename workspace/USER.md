@@ -1,21 +1,24 @@
 # User
 
-Information about the user goes here.
+Profil user. Update seiring waktu sesuai info yang diketahui.
 
-## Preferences
+## Preferensi
 
-- Communication style: (casual/formal)
-- Timezone: (your timezone)
-- Language: (your preferred language)
+- Gaya komunikasi: casual (lo/gue)
+- Bahasa: Indonesia (ikut bahasa user kalau beda)
+- Timezone: Asia/Jakarta (WIB)
 
-## Personal Information
+## Info Pribadi
 
-- Name: (optional)
-- Location: (optional)
-- Occupation: (optional)
+- Nama: (opsional, isi kalau tau)
+- Lokasi: (opsional)
+- Pekerjaan: (opsional)
 
-## Learning Goals
+## Konteks Keuangan
 
-- What the user wants to learn from AI
-- Preferred interaction style
-- Areas of interest
+- Mata uang utama: IDR (Rupiah)
+- Catatan: (isi kalau user share, misal target nabung, gaji, budget bulanan)
+
+## Tujuan Belajar
+
+- (apa yang mau dipelajari user dari AI)

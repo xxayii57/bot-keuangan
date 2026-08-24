@@ -4,8 +4,8 @@ ARG TARGETPLATFORM
 
 RUN apk add --no-cache ca-certificates tzdata
 
-COPY $TARGETPLATFORM/picoclaw /usr/local/bin/picoclaw
-COPY $TARGETPLATFORM/picoclaw-launcher /usr/local/bin/picoclaw-launcher
+COPY $TARGETPLATFORM/intimclaw /usr/local/bin/intimclaw
+COPY $TARGETPLATFORM/intimclaw-launcher /usr/local/bin/intimclaw-launcher
 
-ENTRYPOINT ["picoclaw-launcher"]
+ENTRYPOINT ["intimclaw-launcher"]
 CMD ["-console", "-public", "-no-browser"]
