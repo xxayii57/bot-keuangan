@@ -3,7 +3,7 @@ package oauthprovider
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
 )
 
 type (

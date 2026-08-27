@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xxayii57/bot-keuangan/pkg/seahorse"
+	"github.com/xxayii57/intimclaw/pkg/seahorse"
 )
 
 const answerSystemPrompt = `You are a helpful assistant. Given conversation context, answer the question concisely and accurately. If the answer is not in the context, say "I don't know". Answer in 1-3 sentences maximum.`

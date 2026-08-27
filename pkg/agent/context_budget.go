@@ -6,8 +6,8 @@
 package agent
 
 import (
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/tokenizer"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/tokenizer"
 )
 
 // parseTurnBoundaries returns the starting index of each Turn in the history.

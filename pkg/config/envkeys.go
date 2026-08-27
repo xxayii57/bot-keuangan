@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/xxayii57/bot-keuangan/pkg"
+	"github.com/xxayii57/intimclaw/pkg"
 )
 
 // Runtime environment variable keys for the intimclaw process.

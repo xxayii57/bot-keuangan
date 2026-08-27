@@ -8,7 +8,7 @@ import (
 
 	"github.com/mdp/qrterminal/v3"
 
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/logger"
 )
 
 // AuthFlowOpts configures the interactive QR login flow.

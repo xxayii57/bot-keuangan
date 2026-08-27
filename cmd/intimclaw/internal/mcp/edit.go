@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.mau.fi/util/shlex"
 
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal"
 )
 
 func newEditCommand() *cobra.Command {

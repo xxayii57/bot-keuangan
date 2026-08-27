@@ -3,7 +3,7 @@ package bus
 import (
 	"time"
 
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
 )
 
 type busPublishFailedPayload struct {

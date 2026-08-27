@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 // legacyContextManager wraps the existing summarization/compression logic

@@ -3,8 +3,8 @@ package gateway
 import (
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/agent"
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
+	"github.com/xxayii57/intimclaw/pkg/agent"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
 )
 
 type gatewayEventPayload struct {

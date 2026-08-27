@@ -25,41 +25,41 @@ func TestParseGitHubRef(t *testing.T) {
 	}{
 		{
 			name:         "simple owner/repo",
-			repo:         "xxayii57/bot-keuangan",
+			repo:         "xxayii57/intimclaw",
 			wantOwner:    "xxayii57",
-			wantRepoName: "bot-keuangan",
+			wantRepoName: "intimclaw",
 			wantRef:      "main",
 			wantSubPath:  "",
 		},
 		{
 			name:         "owner/repo with subpath",
-			repo:         "xxayii57/bot-keuangan/skills/test",
+			repo:         "xxayii57/intimclaw/skills/test",
 			wantOwner:    "xxayii57",
-			wantRepoName: "bot-keuangan",
+			wantRepoName: "intimclaw",
 			wantRef:      "main",
 			wantSubPath:  "skills/test",
 		},
 		{
 			name:         "full URL with tree",
-			repo:         "https://github.com/xxayii57/bot-keuangan/tree/dev/skills/test",
+			repo:         "https://github.com/xxayii57/intimclaw/tree/dev/skills/test",
 			wantOwner:    "xxayii57",
-			wantRepoName: "bot-keuangan",
+			wantRepoName: "intimclaw",
 			wantRef:      "dev",
 			wantSubPath:  "skills/test",
 		},
 		{
 			name:         "full URL with blob",
-			repo:         "https://github.com/xxayii57/bot-keuangan/blob/main/README.md",
+			repo:         "https://github.com/xxayii57/intimclaw/blob/main/README.md",
 			wantOwner:    "xxayii57",
-			wantRepoName: "bot-keuangan",
+			wantRepoName: "intimclaw",
 			wantRef:      "main",
 			wantSubPath:  "README.md",
 		},
 		{
 			name:         "full URL without ref",
-			repo:         "https://github.com/xxayii57/bot-keuangan",
+			repo:         "https://github.com/xxayii57/intimclaw",
 			wantOwner:    "xxayii57",
-			wantRepoName: "bot-keuangan",
+			wantRepoName: "intimclaw",
 			wantRef:      "main",
 			wantSubPath:  "",
 		},
@@ -83,15 +83,15 @@ func TestParseGitHubRef(t *testing.T) {
 		},
 		{
 			name:         "with whitespace",
-			repo:         "  xxayii57/bot-keuangan  ",
+			repo:         "  xxayii57/intimclaw  ",
 			wantOwner:    "xxayii57",
-			wantRepoName: "bot-keuangan",
+			wantRepoName: "intimclaw",
 			wantRef:      "main",
 			wantSubPath:  "",
 		},
 		{
 			name:           "invalid non github host",
-			repo:           "https://gitlab.com/xxayii57/bot-keuangan/-/tree/main/skills/test",
+			repo:           "https://gitlab.com/xxayii57/intimclaw/-/tree/main/skills/test",
 			wantErr:        true,
 			wantErrContain: `invalid GitHub URL host "gitlab.com"`,
 		},
@@ -727,12 +727,12 @@ func TestSkillInstaller_InstallFromGitHub_SkillAlreadyExists(t *testing.T) {
 	}
 
 	// Create an existing skill directory
-	existingSkill := filepath.Join(skillsDir, "bot-keuangan")
+	existingSkill := filepath.Join(skillsDir, "intimclaw")
 	os.MkdirAll(existingSkill, 0o755)
 	os.WriteFile(filepath.Join(existingSkill, "SKILL.md"), []byte("existing"), 0o644)
 
 	// Try to install the same skill - should fail
-	err = installer.InstallFromGitHub(context.Background(), "xxayii57/bot-keuangan")
+	err = installer.InstallFromGitHub(context.Background(), "xxayii57/intimclaw")
 	if err == nil {
 		t.Error("InstallFromGitHub() expected error for existing skill, got nil")
 	}

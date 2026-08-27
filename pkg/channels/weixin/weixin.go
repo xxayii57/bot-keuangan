@@ -9,11 +9,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/channels"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/identity"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/channels"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/identity"
+	"github.com/xxayii57/intimclaw/pkg/logger"
 )
 
 // WeixinChannel is the Weixin channel implementation over Tencent iLink REST API.

@@ -3,7 +3,7 @@ package providers
 import (
 	"time"
 
-	cliprovider "github.com/xxayii57/bot-keuangan/pkg/providers/cli"
+	cliprovider "github.com/xxayii57/intimclaw/pkg/providers/cli"
 )
 
 type (

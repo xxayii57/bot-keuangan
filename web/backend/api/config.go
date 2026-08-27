@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/logger"
 )
 
 // registerConfigRoutes binds configuration management endpoints to the ServeMux.

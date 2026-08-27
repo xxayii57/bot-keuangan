@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/memory"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/messageutil"
-	"github.com/xxayii57/bot-keuangan/pkg/session"
-	"github.com/xxayii57/bot-keuangan/pkg/utils"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/memory"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers/messageutil"
+	"github.com/xxayii57/intimclaw/pkg/session"
+	"github.com/xxayii57/intimclaw/pkg/utils"
 )
 
 // registerSessionRoutes binds session list and detail endpoints to the ServeMux.

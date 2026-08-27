@@ -13,10 +13,10 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/channels"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/channels"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/logger"
 )
 
 // mqttPayload is the JSON payload for both inbound and outbound messages.

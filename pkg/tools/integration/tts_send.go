@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/audio/tts"
-	"github.com/xxayii57/bot-keuangan/pkg/media"
+	"github.com/xxayii57/intimclaw/pkg/audio/tts"
+	"github.com/xxayii57/intimclaw/pkg/media"
 )
 
 type SendTTSTool struct {

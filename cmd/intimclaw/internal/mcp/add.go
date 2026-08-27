@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/config"
 )
 
 type addOptions struct {

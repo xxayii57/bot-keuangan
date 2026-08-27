@@ -3,7 +3,7 @@ package fstools
 import (
 	"context"
 
-	toolshared "github.com/xxayii57/bot-keuangan/pkg/tools/shared"
+	toolshared "github.com/xxayii57/intimclaw/pkg/tools/shared"
 )
 
 type ToolResult = toolshared.ToolResult

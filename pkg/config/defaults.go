@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 
-	"github.com/xxayii57/bot-keuangan/pkg"
+	"github.com/xxayii57/intimclaw/pkg"
 )
 
 // DefaultConfig returns the default configuration for IntimClaw.

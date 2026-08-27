@@ -6,8 +6,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 // SetupTurn extracts the one-time initialization phase, returning a

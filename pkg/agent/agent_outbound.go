@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/tools"
-	"github.com/xxayii57/bot-keuangan/pkg/utils"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/tools"
+	"github.com/xxayii57/intimclaw/pkg/utils"
 )
 
 func (al *AgentLoop) maybePublishError(ctx context.Context, channel, chatID, sessionKey string, err error) bool {

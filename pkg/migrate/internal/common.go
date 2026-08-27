@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/config"
 )
 
 func ResolveTargetHome(override string) (string, error) {

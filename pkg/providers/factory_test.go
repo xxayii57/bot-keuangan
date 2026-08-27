@@ -3,8 +3,8 @@ package providers
 import (
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/auth"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/auth"
+	"github.com/xxayii57/intimclaw/pkg/config"
 )
 
 func TestCreateProviderReturnsHTTPProviderForOpenRouter(t *testing.T) {

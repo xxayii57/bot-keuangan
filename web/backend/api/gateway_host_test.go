@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/netbind"
-	"github.com/xxayii57/bot-keuangan/web/backend/launcherconfig"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/netbind"
+	"github.com/xxayii57/intimclaw/web/backend/launcherconfig"
 )
 
 func TestGatewayHostOverrideUsesExplicitRuntimePublic(t *testing.T) {

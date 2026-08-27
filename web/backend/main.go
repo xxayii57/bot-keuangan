@@ -26,14 +26,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/netbind"
-	"github.com/xxayii57/bot-keuangan/web/backend/api"
-	"github.com/xxayii57/bot-keuangan/web/backend/dashboardauth"
-	"github.com/xxayii57/bot-keuangan/web/backend/launcherconfig"
-	"github.com/xxayii57/bot-keuangan/web/backend/middleware"
-	"github.com/xxayii57/bot-keuangan/web/backend/utils"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/netbind"
+	"github.com/xxayii57/intimclaw/web/backend/api"
+	"github.com/xxayii57/intimclaw/web/backend/dashboardauth"
+	"github.com/xxayii57/intimclaw/web/backend/launcherconfig"
+	"github.com/xxayii57/intimclaw/web/backend/middleware"
+	"github.com/xxayii57/intimclaw/web/backend/utils"
 )
 
 const (

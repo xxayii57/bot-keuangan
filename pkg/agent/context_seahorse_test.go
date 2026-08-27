@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
-	"github.com/xxayii57/bot-keuangan/pkg/seahorse"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/seahorse"
 )
 
 // seahorseTestProvider implements providers.LLMProvider for seahorse tests.

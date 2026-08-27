@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/skills"
+	"github.com/xxayii57/intimclaw/pkg/skills"
 )
 
 const (

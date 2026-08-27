@@ -8,10 +8,10 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/cliui"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/credential"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/cliui"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/credential"
 )
 
 func onboard(encrypt bool) {

@@ -22,8 +22,8 @@ import (
 	"github.com/minio/selfupdate"
 	"github.com/spf13/cobra"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/utils"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/utils"
 )
 
 // httpClient is a shared HTTP client used for release checks and downloads.
@@ -198,7 +198,7 @@ func GetProdReleaseAPIURL() string {
 }
 
 // GetReleaseTagAPIURL returns the GitHub Releases API URL for a specific tag.
-// Example: owner="xxayii57", tag="nightly" -> https://api.github.com/repos/xxayii57/bot-keuangan/releases/tags/nightly
+// Example: owner="xxayii57", tag="nightly" -> https://api.github.com/repos/xxayii57/intimclaw/releases/tags/nightly
 func GetReleaseTagAPIURL(owner, tag string) string {
 	return fmt.Sprintf("https://api.github.com/repos/%s/intimclaw/releases/tags/%s", owner, tag)
 }

@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/config"
 )
 
 type builtinAutoHookConfig struct {

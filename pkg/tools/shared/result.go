@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 const (

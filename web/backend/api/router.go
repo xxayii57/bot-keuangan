@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xxayii57/bot-keuangan/web/backend/launcherconfig"
+	"github.com/xxayii57/intimclaw/web/backend/launcherconfig"
 )
 
 // Handler serves HTTP API requests.

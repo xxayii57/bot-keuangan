@@ -3,7 +3,7 @@ package utils
 import (
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 func normalizeToolFeedbackComparisonText(text string) string {

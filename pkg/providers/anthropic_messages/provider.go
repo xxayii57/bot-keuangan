@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/common"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/providers/common"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
 )
 
 type (

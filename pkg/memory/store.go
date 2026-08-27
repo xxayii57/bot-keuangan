@@ -3,7 +3,7 @@ package memory
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 // Store defines an interface for persistent session storage.
@@ -39,6 +39,10 @@ type Store interface {
 
 	// ListSessions returns all known session keys.
 	ListSessions() []string
+	// RenameSession renames a session key.
+	RenameSession(oldKey, newKey string) error
+	// DeleteSession removes a session.
+	DeleteSession(key string) error
 
 	// Close releases any resources held by the store.
 	Close() error

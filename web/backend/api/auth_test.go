@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/web/backend/middleware"
+	"github.com/xxayii57/intimclaw/web/backend/middleware"
 )
 
 type fakePasswordStore struct {

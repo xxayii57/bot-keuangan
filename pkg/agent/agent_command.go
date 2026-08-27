@@ -9,11 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/commands"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/commands"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 func (al *AgentLoop) handleCommand(
@@ -282,6 +282,9 @@ func (al *AgentLoop) buildCommandsRuntime(
 	}
 	if agent != nil && agent.ContextBuilder != nil {
 		rt.ListSkillNames = agent.ContextBuilder.ListSkillNames
+	}
+	if agent != nil {
+		rt.ListSessions = agent.Sessions.ListSessions
 	}
 	rt.ReloadConfig = func() error {
 		if al.reloadFunc == nil {

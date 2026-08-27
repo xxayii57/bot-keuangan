@@ -1,8 +1,8 @@
 package mcp
 
 import (
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
 )
 
 func (m *Manager) publishServerEvent(

@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
 )
 
 // Re-export protocol types used across providers.

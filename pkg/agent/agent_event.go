@@ -5,7 +5,7 @@ package agent
 import (
 	"fmt"
 
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
 )
 
 func (al *AgentLoop) newTurnEventScope(agentID, sessionKey string, turnCtx *TurnContext) turnEventScope {

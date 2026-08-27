@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/isolation"
+	"github.com/xxayii57/intimclaw/pkg/isolation"
 )
 
 // CodexCliProvider implements LLMProvider by wrapping the codex CLI as a subprocess.

@@ -3,8 +3,8 @@ package providers
 import (
 	"testing"
 
-	cliprovider "github.com/xxayii57/bot-keuangan/pkg/providers/cli"
-	oauthprovider "github.com/xxayii57/bot-keuangan/pkg/providers/oauth"
+	cliprovider "github.com/xxayii57/intimclaw/pkg/providers/cli"
+	oauthprovider "github.com/xxayii57/intimclaw/pkg/providers/oauth"
 )
 
 func TestNormalizeToolCallFacadeMatchesCLIProvider(t *testing.T) {

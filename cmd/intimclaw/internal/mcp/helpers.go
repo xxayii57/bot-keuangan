@@ -17,9 +17,9 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	picomcp "github.com/xxayii57/bot-keuangan/pkg/mcp"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	picomcp "github.com/xxayii57/intimclaw/pkg/mcp"
 )
 
 type probeResult struct {

@@ -1,6 +1,6 @@
 package hardwaretools
 
-import toolshared "github.com/xxayii57/bot-keuangan/pkg/tools/shared"
+import toolshared "github.com/xxayii57/intimclaw/pkg/tools/shared"
 
 type ToolResult = toolshared.ToolResult
 

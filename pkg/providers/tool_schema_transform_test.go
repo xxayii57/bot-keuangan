@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	providercommon "github.com/xxayii57/bot-keuangan/pkg/providers/common"
+	providercommon "github.com/xxayii57/intimclaw/pkg/providers/common"
 )
 
 type toolCaptureProvider struct {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/logger"
 )
 
 // escapeXML escapes special characters for safe inclusion in XML content.

@@ -12,11 +12,11 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
-	"github.com/xxayii57/bot-keuangan/pkg/media"
-	"github.com/xxayii57/bot-keuangan/pkg/utils"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
+	"github.com/xxayii57/intimclaw/pkg/media"
+	"github.com/xxayii57/intimclaw/pkg/utils"
 )
 
 // mockChannel is a test double that delegates Send to a configurable function.

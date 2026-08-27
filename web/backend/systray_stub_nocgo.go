@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/logger"
 )
 
 // runTray falls back to a headless mode on platforms where systray requires cgo.

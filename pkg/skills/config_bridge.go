@@ -1,6 +1,6 @@
 package skills
 
-import "github.com/xxayii57/bot-keuangan/pkg/config"
+import "github.com/xxayii57/intimclaw/pkg/config"
 
 const defaultGitHubRegistryBaseURL = "https://github.com"
 

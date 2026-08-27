@@ -14,8 +14,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xxayii57/bot-keuangan/pkg/fileutil"
-	"github.com/xxayii57/bot-keuangan/pkg/skills"
+	"github.com/xxayii57/intimclaw/pkg/fileutil"
+	"github.com/xxayii57/intimclaw/pkg/skills"
 )
 
 type Store struct {

@@ -1,6 +1,6 @@
 package session
 
-import "github.com/xxayii57/bot-keuangan/pkg/providers"
+import "github.com/xxayii57/intimclaw/pkg/providers"
 
 // SessionStore defines the persistence operations used by the agent loop.
 // Both SessionManager (legacy JSON backend) and JSONLBackend satisfy this
@@ -29,6 +29,10 @@ type SessionStore interface {
 	Save(key string) error
 	// ListSessions returns all known session keys.
 	ListSessions() []string
+	// RenameSession renames a session key.
+	RenameSession(oldKey, newKey string) error
+	// DeleteSession removes a session.
+	DeleteSession(key string) error
 	// Close releases resources held by the store.
 	Close() error
 }

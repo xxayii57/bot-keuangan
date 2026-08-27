@@ -1,5 +1,5 @@
 package devices
 
-import "github.com/xxayii57/bot-keuangan/pkg/devices/events"
+import "github.com/xxayii57/intimclaw/pkg/devices/events"
 
 type EventSource = events.EventSource

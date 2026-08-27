@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/media"
+	"github.com/xxayii57/intimclaw/pkg/media"
 )
 
 func TestParseMessageSegments_BlocksLoopbackInboundMediaURL(t *testing.T) {

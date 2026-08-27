@@ -9,11 +9,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/constants"
-	"github.com/xxayii57/bot-keuangan/pkg/cron"
-	"github.com/xxayii57/bot-keuangan/pkg/utils"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/constants"
+	"github.com/xxayii57/intimclaw/pkg/cron"
+	"github.com/xxayii57/intimclaw/pkg/utils"
 )
 
 // JobExecutor is the interface for executing cron jobs through the agent

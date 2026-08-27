@@ -5,8 +5,8 @@ package adapters
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/agent/interfaces"
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/agent/interfaces"
+	"github.com/xxayii57/intimclaw/pkg/bus"
 )
 
 // messageBusAdapter wraps *bus.MessageBus to implement interfaces.MessageBus.

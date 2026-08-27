@@ -15,29 +15,30 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/agent"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/auth"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/cliui"
-	configcmd "github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/config"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/cron"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/gateway"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/mcp"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/migrate"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/model"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/onboard"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/skills"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/status"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/version"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/updater"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/agent"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/auth"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/cliui"
+	configcmd "github.com/xxayii57/intimclaw/cmd/intimclaw/internal/config"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/cron"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/gateway"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/mcp"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/migrate"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/model"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/onboard"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/sessions"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/skills"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/status"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/version"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/updater"
 )
 
 var rootNoColor bool
 
 // initTermuxSSL detects Termux environment and sets SSL_CERT_FILE if not already set.
 // This fixes X509 certificate errors when running IntimClaw inside Termux or termux-chroot.
-// See: https://github.com/xxayii57/bot-keuangan/issues/2944
+// See: https://github.com/xxayii57/intimclaw/issues/2944
 func initTermuxSSL() {
 	// Only applicable on Linux/Android
 	if runtime.GOOS != "linux" && runtime.GOOS != "android" {
@@ -139,6 +140,7 @@ intimclaw --no-color status`,
 		migrate.NewMigrateCommand(),
 		skills.NewSkillsCommand(),
 		model.NewModelCommand(),
+		sessions.NewSessionsCommand(),
 		updater.NewUpdateCommand("intimclaw"),
 		version.NewVersionCommand(),
 	)

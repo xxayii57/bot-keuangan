@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
 )
 
 // NormalizeStoredToolCall extracts the tool name, arguments, and thought signature

@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/netbind"
-	"github.com/xxayii57/bot-keuangan/web/backend/launcherconfig"
-	"github.com/xxayii57/bot-keuangan/web/backend/middleware"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/netbind"
+	"github.com/xxayii57/intimclaw/web/backend/launcherconfig"
+	"github.com/xxayii57/intimclaw/web/backend/middleware"
 )
 
 func TestShouldEnableLauncherFileLogging(t *testing.T) {

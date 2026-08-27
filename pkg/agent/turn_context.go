@@ -1,9 +1,9 @@
 package agent
 
 import (
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/routing"
-	"github.com/xxayii57/bot-keuangan/pkg/session"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/routing"
+	"github.com/xxayii57/intimclaw/pkg/session"
 )
 
 // TurnContext carries normalized turn-scoped facts that can be shared across

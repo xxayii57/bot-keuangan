@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	basechannels "github.com/xxayii57/bot-keuangan/pkg/channels"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
+	basechannels "github.com/xxayii57/intimclaw/pkg/channels"
+	"github.com/xxayii57/intimclaw/pkg/config"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)

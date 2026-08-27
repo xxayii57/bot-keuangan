@@ -25,10 +25,10 @@ builds:
       - stdjson
     ldflags:
       - -s -w
-      - -X github.com/xxayii57/bot-keuangan/pkg/config.Version={{ .Version }}
-      - -X github.com/xxayii57/bot-keuangan/pkg/config.GitCommit={{ .ShortCommit }}
-      - -X github.com/xxayii57/bot-keuangan/pkg/config.BuildTime={{ .Date }}
-      - -X github.com/xxayii57/bot-keuangan/pkg/config.GoVersion={{ with index .Env "GOVERSION" }}{{ . }}{{ else }}unknown{{ end }}
+      - -X github.com/xxayii57/intimclaw/pkg/config.Version={{ .Version }}
+      - -X github.com/xxayii57/intimclaw/pkg/config.GitCommit={{ .ShortCommit }}
+      - -X github.com/xxayii57/intimclaw/pkg/config.BuildTime={{ .Date }}
+      - -X github.com/xxayii57/intimclaw/pkg/config.GoVersion={{ with index .Env "GOVERSION" }}{{ . }}{{ else }}unknown{{ end }}
     goos:
       - linux
       - windows
@@ -68,10 +68,10 @@ builds:
       - stdjson
     ldflags:
       - -s -w
-      - -X github.com/xxayii57/bot-keuangan/pkg/config.Version={{ .Version }}
-      - -X github.com/xxayii57/bot-keuangan/pkg/config.GitCommit={{ .ShortCommit }}
-      - -X github.com/xxayii57/bot-keuangan/pkg/config.BuildTime={{ .Date }}
-      - -X github.com/xxayii57/bot-keuangan/pkg/config.GoVersion={{ with index .Env "GOVERSION" }}{{ . }}{{ else }}unknown{{ end }}
+      - -X github.com/xxayii57/intimclaw/pkg/config.Version={{ .Version }}
+      - -X github.com/xxayii57/intimclaw/pkg/config.GitCommit={{ .ShortCommit }}
+      - -X github.com/xxayii57/intimclaw/pkg/config.BuildTime={{ .Date }}
+      - -X github.com/xxayii57/intimclaw/pkg/config.GoVersion={{ with index .Env "GOVERSION" }}{{ . }}{{ else }}unknown{{ end }}
     goos:
       - linux
       - windows

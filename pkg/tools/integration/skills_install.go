@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/fileutil"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/skills"
-	"github.com/xxayii57/bot-keuangan/pkg/utils"
+	"github.com/xxayii57/intimclaw/pkg/fileutil"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/skills"
+	"github.com/xxayii57/intimclaw/pkg/utils"
 )
 
 const defaultSkillRegistryName = "github"

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/tools"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/tools"
 )
 
 type turnProfileCaptureProvider struct {

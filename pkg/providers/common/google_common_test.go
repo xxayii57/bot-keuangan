@@ -3,7 +3,7 @@ package common
 import (
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
 )
 
 func TestNormalizeStoredToolCall_TopLevelFields(t *testing.T) {

@@ -1,8 +1,8 @@
 package channels
 
 import (
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
 )
 
 func channelTypeForEvent(m *Manager, channelName string) string {

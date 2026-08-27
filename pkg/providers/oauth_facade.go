@@ -1,7 +1,7 @@
 package providers
 
 import (
-	oauthprovider "github.com/xxayii57/bot-keuangan/pkg/providers/oauth"
+	oauthprovider "github.com/xxayii57/intimclaw/pkg/providers/oauth"
 )
 
 type (

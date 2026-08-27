@@ -1,6 +1,6 @@
 package agent
 
-import runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
+import runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
 
 func (al *AgentLoop) publishRuntimeEvent(evt runtimeevents.Event) {
 	if al == nil || al.runtimeEvents == nil {

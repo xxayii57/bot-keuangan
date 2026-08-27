@@ -10,7 +10,7 @@ package providers
 import (
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/config"
 )
 
 // With the azidentity build tag, an azure config with no api_key must succeed

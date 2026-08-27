@@ -3,11 +3,11 @@ package tools
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/xxayii57/bot-keuangan/pkg/audio/tts"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/media"
-	"github.com/xxayii57/bot-keuangan/pkg/skills"
-	integrationtools "github.com/xxayii57/bot-keuangan/pkg/tools/integration"
+	"github.com/xxayii57/intimclaw/pkg/audio/tts"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/media"
+	"github.com/xxayii57/intimclaw/pkg/skills"
+	integrationtools "github.com/xxayii57/intimclaw/pkg/tools/integration"
 )
 
 type (

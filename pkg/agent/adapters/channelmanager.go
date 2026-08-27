@@ -5,9 +5,9 @@ package adapters
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/agent/interfaces"
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/channels"
+	"github.com/xxayii57/intimclaw/pkg/agent/interfaces"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/channels"
 )
 
 // channelManagerAdapter wraps *channels.Manager to implement interfaces.ChannelManager.

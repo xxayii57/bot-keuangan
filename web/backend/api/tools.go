@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	picotools "github.com/xxayii57/bot-keuangan/pkg/tools"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	picotools "github.com/xxayii57/intimclaw/pkg/tools"
 )
 
 type toolCatalogEntry struct {

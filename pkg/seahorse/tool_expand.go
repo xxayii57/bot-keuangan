@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/xxayii57/bot-keuangan/pkg/tools"
+	"github.com/xxayii57/intimclaw/pkg/tools"
 )
 
 // ExpandTool recovers full message content by ID.

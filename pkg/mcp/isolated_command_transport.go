@@ -13,7 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/xxayii57/bot-keuangan/pkg/isolation"
+	"github.com/xxayii57/intimclaw/pkg/isolation"
 )
 
 var isolatedCommandTerminateDuration = 5 * time.Second

@@ -20,13 +20,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/health"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/netbind"
-	ppid "github.com/xxayii57/bot-keuangan/pkg/pid"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/web/backend/utils"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/health"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/netbind"
+	ppid "github.com/xxayii57/intimclaw/pkg/pid"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/web/backend/utils"
 )
 
 // gateway holds the state for the managed gateway process.

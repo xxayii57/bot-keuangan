@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/seahorse"
+	"github.com/xxayii57/intimclaw/pkg/seahorse"
 )
 
 // EvalResult holds per-sample evaluation results for one mode.

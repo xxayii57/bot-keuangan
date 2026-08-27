@@ -3,10 +3,10 @@
 package agent
 
 import (
-	"github.com/xxayii57/bot-keuangan/pkg/agent/interfaces"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/media"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/agent/interfaces"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/media"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 // Pipeline holds the runtime dependencies used by Pipeline methods.

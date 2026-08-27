@@ -5,9 +5,9 @@ package agent
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 // Finalize handles turn finalization, either:

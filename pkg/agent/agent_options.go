@@ -1,6 +1,6 @@
 package agent
 
-import runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
+import runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
 
 // AgentLoopOption configures an AgentLoop at construction time.
 type AgentLoopOption func(*AgentLoop)

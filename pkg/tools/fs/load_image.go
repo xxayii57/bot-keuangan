@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/media"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/media"
 )
 
 // LoadImageTool loads a local image file into the MediaStore and returns a

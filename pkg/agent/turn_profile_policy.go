@@ -3,8 +3,8 @@ package agent
 import (
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 func resolveTurnProfileOptions(cfg *config.Config, opts processOptions) (processOptions, error) {

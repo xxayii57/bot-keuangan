@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/routing"
+	"github.com/xxayii57/intimclaw/pkg/routing"
 )
 
 const (

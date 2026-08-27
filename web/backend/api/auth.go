@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/web/backend/middleware"
+	"github.com/xxayii57/intimclaw/web/backend/middleware"
 )
 
 // PasswordStore is the interface for dashboard password persistence.

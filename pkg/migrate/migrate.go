@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/migrate/internal"
-	"github.com/xxayii57/bot-keuangan/pkg/migrate/sources/openclaw"
+	"github.com/xxayii57/intimclaw/pkg/migrate/internal"
+	"github.com/xxayii57/intimclaw/pkg/migrate/sources/openclaw"
 )
 
 type (

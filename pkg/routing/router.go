@@ -1,7 +1,7 @@
 package routing
 
 import (
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 // defaultThreshold is used when the config threshold is zero or negative.

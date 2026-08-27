@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/constants"
-	"github.com/xxayii57/bot-keuangan/pkg/devices/events"
-	"github.com/xxayii57/bot-keuangan/pkg/devices/sources"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/state"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/constants"
+	"github.com/xxayii57/intimclaw/pkg/devices/events"
+	"github.com/xxayii57/intimclaw/pkg/devices/sources"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/state"
 )
 
 type Service struct {

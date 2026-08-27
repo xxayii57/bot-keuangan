@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/tools"
+	"github.com/xxayii57/intimclaw/pkg/tools"
 )
 
 type toolDiscoveryPromptContributor struct {

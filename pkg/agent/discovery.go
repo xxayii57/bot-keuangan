@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/routing"
+	"github.com/xxayii57/intimclaw/pkg/routing"
 )
 
 // AgentDescriptor is the structured discovery payload injected into each

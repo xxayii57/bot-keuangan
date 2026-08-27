@@ -6,8 +6,8 @@ import (
 	"log"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/memory"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/memory"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 // JSONLBackend adapts a memory.Store into the SessionStore interface.
@@ -189,4 +189,14 @@ func (b *JSONLBackend) Close() error {
 // ListSessions returns all known session keys.
 func (b *JSONLBackend) ListSessions() []string {
 	return b.store.ListSessions()
+}
+
+// RenameSession renames a session key by moving its data file.
+func (b *JSONLBackend) RenameSession(oldKey, newKey string) error {
+	return b.store.RenameSession(oldKey, newKey)
+}
+
+// DeleteSession removes a session and its data file.
+func (b *JSONLBackend) DeleteSession(key string) error {
+	return b.store.DeleteSession(key)
 }

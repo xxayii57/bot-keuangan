@@ -3,8 +3,8 @@ package channels
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/commands"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/commands"
 )
 
 // TypingCapable — channels that can show a typing/thinking indicator.

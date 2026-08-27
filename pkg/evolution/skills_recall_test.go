@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/evolution"
+	"github.com/xxayii57/intimclaw/pkg/evolution"
 )
 
 func TestRecallSimilarSkills_ReturnsWorkspaceSkillFirst(t *testing.T) {

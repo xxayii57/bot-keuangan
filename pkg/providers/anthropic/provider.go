@@ -10,8 +10,8 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/common"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/providers/common"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
 )
 
 type (

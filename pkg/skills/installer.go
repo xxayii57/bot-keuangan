@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/fileutil"
-	"github.com/xxayii57/bot-keuangan/pkg/utils"
+	"github.com/xxayii57/intimclaw/pkg/fileutil"
+	"github.com/xxayii57/intimclaw/pkg/utils"
 )
 
 // GitHubContent represents a file or directory in GitHub API response

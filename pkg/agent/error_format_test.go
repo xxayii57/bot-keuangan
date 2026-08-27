@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/common"
+	"github.com/xxayii57/intimclaw/pkg/providers/common"
 )
 
 func TestFormatProcessingError_InvalidAPIKey(t *testing.T) {

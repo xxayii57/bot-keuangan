@@ -3,7 +3,7 @@ package messageutil
 import (
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
 )
 
 // IsTransientAssistantThoughtMessage reports whether msg is an invalid

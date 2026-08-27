@@ -7,7 +7,7 @@ import (
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 
-	"github.com/xxayii57/bot-keuangan/pkg/channels"
+	"github.com/xxayii57/intimclaw/pkg/channels"
 )
 
 // mentionPlaceholderRegex matches @_user_N placeholders inserted by Feishu for mentions.

@@ -12,7 +12,7 @@ import (
 
 	"github.com/adhocore/gronx"
 
-	"github.com/xxayii57/bot-keuangan/pkg/fileutil"
+	"github.com/xxayii57/intimclaw/pkg/fileutil"
 )
 
 type CronSchedule struct {

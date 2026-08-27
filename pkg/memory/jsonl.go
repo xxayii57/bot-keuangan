@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/fileutil"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/messageutil"
+	"github.com/xxayii57/intimclaw/pkg/fileutil"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers/messageutil"
 )
 
 const (
@@ -876,6 +876,45 @@ func (s *JSONLStore) ListSessions() []string {
 		}
 	}
 	return keys
+}
+
+// RenameSession renames a session by renaming its files and updating the meta key.
+func (s *JSONLStore) RenameSession(oldKey, newKey string) error {
+	oldHash := sanitizeKey(oldKey)
+	newHash := sanitizeKey(newKey)
+	oldJsonl := filepath.Join(s.dir, oldHash+".jsonl")
+	newJsonl := filepath.Join(s.dir, newHash+".jsonl")
+	oldMeta := filepath.Join(s.dir, oldHash+".meta.json")
+	newMeta := filepath.Join(s.dir, newHash+".meta.json")
+	if _, err := os.Stat(oldJsonl); os.IsNotExist(err) {
+		return fmt.Errorf("session %q not found", oldKey)
+	}
+	if _, err := os.Stat(newJsonl); !os.IsNotExist(err) {
+		return fmt.Errorf("session %q already exists", newKey)
+	}
+	if err := os.Rename(oldJsonl, newJsonl); err != nil {
+		return fmt.Errorf("rename session jsonl: %w", err)
+	}
+	os.Rename(oldMeta, newMeta)
+	// Update meta key
+	if data, err := os.ReadFile(newMeta); err == nil {
+		var meta SessionMeta
+		if json.Unmarshal(data, &meta) == nil {
+			meta.Key = newKey
+			if out, err := json.MarshalIndent(meta, "", "  "); err == nil {
+				os.WriteFile(newMeta, out, 0644)
+			}
+		}
+	}
+	return nil
+}
+
+// DeleteSession removes a session's files.
+func (s *JSONLStore) DeleteSession(key string) error {
+	hash := sanitizeKey(key)
+	os.Remove(filepath.Join(s.dir, hash+".jsonl"))
+	os.Remove(filepath.Join(s.dir, hash+".meta.json"))
+	return nil
 }
 
 func (s *JSONLStore) Close() error {

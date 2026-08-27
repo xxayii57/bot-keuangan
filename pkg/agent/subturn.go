@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/messageutil"
-	"github.com/xxayii57/bot-keuangan/pkg/tools"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers/messageutil"
+	"github.com/xxayii57/intimclaw/pkg/tools"
 )
 
 // ====================== Config & Constants ======================
@@ -633,6 +633,8 @@ type ephemeralSessionStoreIface interface {
 	TruncateHistory(key string, keepLast int)
 	Save(key string) error
 	ListSessions() []string
+	RenameSession(oldKey, newKey string) error
+	DeleteSession(key string) error
 	Close() error
 }
 
@@ -700,6 +702,8 @@ func (e *ephemeralSessionStore) TruncateHistory(_ string, keepLast int) {
 func (e *ephemeralSessionStore) Save(_ string) error    { return nil }
 func (e *ephemeralSessionStore) Close() error           { return nil }
 func (e *ephemeralSessionStore) ListSessions() []string { return nil }
+func (e *ephemeralSessionStore) RenameSession(oldKey, newKey string) error { return nil }
+func (e *ephemeralSessionStore) DeleteSession(key string) error { return nil }
 
 func (e *ephemeralSessionStore) truncateLocked() {
 	if len(e.history) > maxEphemeralHistorySize {

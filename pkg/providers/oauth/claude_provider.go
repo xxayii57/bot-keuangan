@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/xxayii57/bot-keuangan/pkg/auth"
-	anthropicprovider "github.com/xxayii57/bot-keuangan/pkg/providers/anthropic"
+	"github.com/xxayii57/intimclaw/pkg/auth"
+	anthropicprovider "github.com/xxayii57/intimclaw/pkg/providers/anthropic"
 )
 
 type ClaudeProvider struct {

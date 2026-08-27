@@ -3,8 +3,8 @@ package integrationtools
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/session"
-	toolshared "github.com/xxayii57/bot-keuangan/pkg/tools/shared"
+	"github.com/xxayii57/intimclaw/pkg/session"
+	toolshared "github.com/xxayii57/intimclaw/pkg/tools/shared"
 )
 
 type (

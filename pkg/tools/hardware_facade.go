@@ -1,6 +1,6 @@
 package tools
 
-import hardwaretools "github.com/xxayii57/bot-keuangan/pkg/tools/hardware"
+import hardwaretools "github.com/xxayii57/intimclaw/pkg/tools/hardware"
 
 type (
 	I2CTool    = hardwaretools.I2CTool

@@ -3,7 +3,7 @@ package approval
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/agent"
+	"github.com/xxayii57/intimclaw/pkg/agent"
 )
 
 var _ agent.ToolApprover = (*Gate)(nil)

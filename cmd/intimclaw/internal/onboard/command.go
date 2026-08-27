@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	intimclaw "github.com/xxayii57/bot-keuangan"
-	"github.com/xxayii57/bot-keuangan/cmd/intimclaw/internal/model"
+	intimclaw "github.com/xxayii57/intimclaw"
+	"github.com/xxayii57/intimclaw/cmd/intimclaw/internal/model"
 )
 
 var embeddedFiles = intimclaw.OnboardWorkspace

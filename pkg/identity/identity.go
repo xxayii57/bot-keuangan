@@ -6,7 +6,7 @@ package identity
 import (
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/bus"
 )
 
 // BuildCanonicalID constructs a canonical "platform:id" identifier.

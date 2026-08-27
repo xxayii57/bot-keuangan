@@ -3,7 +3,7 @@ package channels
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/bus"
 )
 
 // MediaSender is an optional interface for channels that can send

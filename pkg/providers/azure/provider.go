@@ -13,9 +13,9 @@ import (
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/responses"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers/common"
-	orc "github.com/xxayii57/bot-keuangan/pkg/providers/openai_responses_common"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/protocoltypes"
+	"github.com/xxayii57/intimclaw/pkg/providers/common"
+	orc "github.com/xxayii57/intimclaw/pkg/providers/openai_responses_common"
+	"github.com/xxayii57/intimclaw/pkg/providers/protocoltypes"
 )
 
 type (

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/xxayii57/bot-keuangan/pkg/routing"
+	"github.com/xxayii57/intimclaw/pkg/routing"
 )
 
 // DelegateTool delegates a task to a specific named agent and waits for

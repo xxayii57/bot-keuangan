@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/auth"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	ppid "github.com/xxayii57/bot-keuangan/pkg/pid"
-	"github.com/xxayii57/bot-keuangan/web/backend/utils"
+	"github.com/xxayii57/intimclaw/pkg/auth"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	ppid "github.com/xxayii57/intimclaw/pkg/pid"
+	"github.com/xxayii57/intimclaw/web/backend/utils"
 )
 
 func startLongRunningProcess(t *testing.T) *exec.Cmd {

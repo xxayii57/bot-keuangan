@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xxayii57/bot-keuangan/pkg"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg"
+	"github.com/xxayii57/intimclaw/pkg/config"
 )
 
 // MountRule describes a source-to-target mount exposed inside the Linux

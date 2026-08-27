@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/mcp"
-	agenttools "github.com/xxayii57/bot-keuangan/pkg/tools"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/mcp"
+	agenttools "github.com/xxayii57/intimclaw/pkg/tools"
 )
 
 func boolPtr(b bool) *bool { return &b }

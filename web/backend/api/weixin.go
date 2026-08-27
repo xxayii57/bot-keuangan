@@ -13,9 +13,9 @@ import (
 
 	"rsc.io/qr"
 
-	"github.com/xxayii57/bot-keuangan/pkg/channels/weixin"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/channels/weixin"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/logger"
 )
 
 const (

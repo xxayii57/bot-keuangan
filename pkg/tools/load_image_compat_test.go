@@ -3,7 +3,7 @@ package tools
 import (
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers"
 )
 
 func TestSubagentManager_SetMediaResolver_StoresResolver(t *testing.T) {

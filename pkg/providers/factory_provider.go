@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	anthropicmessages "github.com/xxayii57/bot-keuangan/pkg/providers/anthropic_messages"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/azure"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/bedrock"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/common"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	anthropicmessages "github.com/xxayii57/intimclaw/pkg/providers/anthropic_messages"
+	"github.com/xxayii57/intimclaw/pkg/providers/azure"
+	"github.com/xxayii57/intimclaw/pkg/providers/bedrock"
+	"github.com/xxayii57/intimclaw/pkg/providers/common"
 )
 
 // createClaudeAuthProvider creates a Claude provider using OAuth credentials from auth store.

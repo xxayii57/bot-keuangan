@@ -19,10 +19,10 @@ import (
 
 	"github.com/creack/pty"
 
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/constants"
-	"github.com/xxayii57/bot-keuangan/pkg/isolation"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/constants"
+	"github.com/xxayii57/intimclaw/pkg/isolation"
+	"github.com/xxayii57/intimclaw/pkg/logger"
 )
 
 var (

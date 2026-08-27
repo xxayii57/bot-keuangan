@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/xxayii57/bot-keuangan/pkg/updater"
+	"github.com/xxayii57/intimclaw/pkg/updater"
 )
 
 // registerUpdateRoutes registers the self-update endpoint.

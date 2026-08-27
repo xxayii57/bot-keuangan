@@ -2,14 +2,15 @@ package session
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/providers/messageutil"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/providers/messageutil"
 )
 
 type Session struct {
@@ -176,6 +177,36 @@ func (sm *SessionManager) ListSessions() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+// RenameSession renames a session key.
+func (sm *SessionManager) RenameSession(oldKey, newKey string) error {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sess, ok := sm.sessions[oldKey]
+	if !ok {
+		return fmt.Errorf("session %q not found", oldKey)
+	}
+	delete(sm.sessions, oldKey)
+	sess.Key = newKey
+	sm.sessions[newKey] = sess
+	// Rename the file
+	oldPath := filepath.Join(sm.storage, sanitizeFilename(oldKey)+".json")
+	newPath := filepath.Join(sm.storage, sanitizeFilename(newKey)+".json")
+	if _, err := os.Stat(oldPath); err == nil {
+		os.Rename(oldPath, newPath)
+	}
+	return nil
+}
+
+// DeleteSession removes a session.
+func (sm *SessionManager) DeleteSession(key string) error {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	delete(sm.sessions, key)
+	path := filepath.Join(sm.storage, sanitizeFilename(key)+".json")
+	os.Remove(path)
+	return nil
 }
 
 // sanitizeFilename converts a session key into a cross-platform safe filename.

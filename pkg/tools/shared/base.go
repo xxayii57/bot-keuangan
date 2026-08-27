@@ -3,7 +3,7 @@ package toolshared
 import (
 	"context"
 
-	"github.com/xxayii57/bot-keuangan/pkg/session"
+	"github.com/xxayii57/intimclaw/pkg/session"
 )
 
 // Tool is the interface that all tools must implement.

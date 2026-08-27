@@ -21,14 +21,14 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/channels"
-	"github.com/xxayii57/bot-keuangan/pkg/commands"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/identity"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/media"
-	"github.com/xxayii57/bot-keuangan/pkg/utils"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/channels"
+	"github.com/xxayii57/intimclaw/pkg/commands"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/identity"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/media"
+	"github.com/xxayii57/intimclaw/pkg/utils"
 )
 
 var (
@@ -60,6 +60,8 @@ type TelegramChannel struct {
 	cancel    context.CancelFunc
 	tgCfg     *config.TelegramSettings
 	progress  *channels.ToolFeedbackAnimator
+	sessionKb *SessionKeyboard
+	agentSessions func() []string
 
 	callbackMu      sync.Mutex
 	callbackHandler func(data string) bool
@@ -83,6 +85,22 @@ func (c *TelegramChannel) SetCallbackHandler(fn func(data string) bool) {
 	c.callbackMu.Lock()
 	c.callbackHandler = fn
 	c.callbackMu.Unlock()
+}
+
+// SetAgentSessions provides a function to list sessions from the agent loop.
+func (c *TelegramChannel) SetAgentSessions(fn func() []string) {
+	c.agentSessions = fn
+}
+
+// SetSessionCallbacks wires rename/delete/refresh functions to the session keyboard.
+func (c *TelegramChannel) SetSessionCallbacks(rename func(string, string) error, delete func(string) error, refresh func() []string) {
+	if c.sessionKb != nil {
+		c.sessionKb.RenameSession = rename
+		c.sessionKb.DeleteSession = delete
+		if refresh != nil {
+			c.sessionKb.RefreshSessions = refresh
+		}
+	}
 }
 
 type telegramMediaGroup struct {
@@ -154,6 +172,7 @@ func NewTelegramChannel(
 		mediaGroupDelay: telegramMediaGroupDelay(telegramCfg),
 	}
 	ch.progress = channels.NewToolFeedbackAnimator(ch.EditMessage)
+	ch.sessionKb = NewSessionKeyboard(bot)
 	return ch, nil
 }
 
@@ -192,6 +211,13 @@ func (c *TelegramChannel) Start(ctx context.Context) error {
 		if query.Data == "" {
 			return nil
 		}
+
+		// Try session keyboard first
+		if c.sessionKb != nil && c.sessionKb.HandleCallback(ctx, query) {
+			return nil
+		}
+
+		// Then try approval gate
 		c.callbackMu.Lock()
 		handler := c.callbackHandler
 		c.callbackMu.Unlock()
@@ -1189,6 +1215,24 @@ func (c *TelegramChannel) handleMessages(ctx context.Context, messages []*telego
 	// must share one session per group.
 	compositeChatID := fmt.Sprintf("%d", chatID)
 	threadID := message.MessageThreadID
+
+	// Intercept /sessions command — send inline keyboard
+	if strings.HasPrefix(strings.TrimSpace(content), "/sessions") {
+		if c.sessionKb != nil {
+			if c.agentSessions != nil {
+				c.sessionKb.UpdateSessions(c.agentSessions(), "")
+			}
+			c.sessionKb.SendSessionList(ctx, chatID)
+			return nil
+		}
+	}
+
+	// Process pending rename/delete action
+	if c.sessionKb != nil {
+		if c.sessionKb.ProcessPendingAction(ctx, chatID, content) {
+			return nil
+		}
+	}
 	if message.Chat.IsForum && threadID != 0 {
 		compositeChatID = fmt.Sprintf("%d/%d", chatID, threadID)
 	}

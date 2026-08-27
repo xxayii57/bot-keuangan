@@ -12,10 +12,10 @@ import (
 
 	"github.com/h2non/filetype"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/media"
-	fstools "github.com/xxayii57/bot-keuangan/pkg/tools/fs"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/media"
+	fstools "github.com/xxayii57/intimclaw/pkg/tools/fs"
 )
 
 type SendCallbackWithContext func(

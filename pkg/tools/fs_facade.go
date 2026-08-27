@@ -3,8 +3,8 @@ package tools
 import (
 	"regexp"
 
-	"github.com/xxayii57/bot-keuangan/pkg/media"
-	fstools "github.com/xxayii57/bot-keuangan/pkg/tools/fs"
+	"github.com/xxayii57/intimclaw/pkg/media"
+	fstools "github.com/xxayii57/intimclaw/pkg/tools/fs"
 )
 
 type (

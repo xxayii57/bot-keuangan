@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/web/backend/launcherconfig"
+	"github.com/xxayii57/intimclaw/web/backend/launcherconfig"
 )
 
 func TestGetLauncherConfigUsesRuntimeFallback(t *testing.T) {

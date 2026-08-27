@@ -10,9 +10,9 @@ import (
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
 
-	"github.com/xxayii57/bot-keuangan/pkg/auth"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	orc "github.com/xxayii57/bot-keuangan/pkg/providers/openai_responses_common"
+	"github.com/xxayii57/intimclaw/pkg/auth"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	orc "github.com/xxayii57/intimclaw/pkg/providers/openai_responses_common"
 )
 
 const (

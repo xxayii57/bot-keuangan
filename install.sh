@@ -3,7 +3,7 @@
 # INTIMCLAW INSTALLER (Linux / macOS)
 # Installs the latest stable release from GitHub.
 #
-#   curl -fsSL https://raw.githubusercontent.com/xxayii57/bot-keuangan/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/xxayii57/intimclaw/main/install.sh | bash
 # =================================================================
 set -euo pipefail
 
@@ -18,7 +18,7 @@ ok()    { echo -e "${GREEN}[OK]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 fail()  { echo -e "${RED}[Error]${NC} $1" >&2; exit 1; }
 
-GITHUB_REPO="xxayii57/bot-keuangan"
+GITHUB_REPO="xxayii57/intimclaw"
 DOWNLOAD_BASE="https://github.com/${GITHUB_REPO}/releases/latest/download"
 
 echo -e "${BLUE}=====================================================${NC}"

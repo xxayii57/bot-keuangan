@@ -7,8 +7,8 @@ import (
 
 	"fyne.io/systray"
 
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/web/backend/utils"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/web/backend/utils"
 )
 
 func runTray() {
@@ -54,7 +54,7 @@ func onReady() {
 				// Version info - do nothing, just shows current version
 
 			case <-mRepo.ClickedCh:
-				if err := utils.OpenBrowser("https://github.com/xxayii57/bot-keuangan"); err != nil {
+				if err := utils.OpenBrowser("https://github.com/xxayii57/intimclaw"); err != nil {
 					logger.Errorf("Failed to open GitHub: %v", err)
 				}
 

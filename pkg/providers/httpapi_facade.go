@@ -1,6 +1,6 @@
 package providers
 
-import httpapi "github.com/xxayii57/bot-keuangan/pkg/providers/httpapi"
+import httpapi "github.com/xxayii57/intimclaw/pkg/providers/httpapi"
 
 type (
 	GeminiProvider = httpapi.GeminiProvider

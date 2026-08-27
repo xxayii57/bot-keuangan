@@ -15,10 +15,10 @@ import (
 
 	"github.com/caarlos0/env/v11"
 
-	"github.com/xxayii57/bot-keuangan/pkg"
-	"github.com/xxayii57/bot-keuangan/pkg/fileutil"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	providercommon "github.com/xxayii57/bot-keuangan/pkg/providers/common"
+	"github.com/xxayii57/intimclaw/pkg"
+	"github.com/xxayii57/intimclaw/pkg/fileutil"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	providercommon "github.com/xxayii57/intimclaw/pkg/providers/common"
 )
 
 // rrCounter is a global counter for round-robin load balancing across models.

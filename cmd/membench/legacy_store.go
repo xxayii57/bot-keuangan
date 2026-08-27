@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/session"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/session"
 )
 
 // LegacyStore wraps session.SessionManager for legacy baseline.

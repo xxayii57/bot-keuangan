@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/bus"
 )
 
 // computeContextUsage estimates current context window consumption for the

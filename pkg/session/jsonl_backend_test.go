@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/memory"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/routing"
-	"github.com/xxayii57/bot-keuangan/pkg/session"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/memory"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/routing"
+	"github.com/xxayii57/intimclaw/pkg/session"
 )
 
 // Compile-time interface satisfaction checks.

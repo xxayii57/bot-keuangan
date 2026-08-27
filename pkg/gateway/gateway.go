@@ -18,43 +18,43 @@ import (
 	"github.com/mymmrac/telego"
 
 
-	"github.com/xxayii57/bot-keuangan/pkg/agent"
-	"github.com/xxayii57/bot-keuangan/pkg/agent/approval"
-	"github.com/xxayii57/bot-keuangan/pkg/audio/asr"
-	"github.com/xxayii57/bot-keuangan/pkg/audio/tts"
-	"github.com/xxayii57/bot-keuangan/pkg/bus"
-	"github.com/xxayii57/bot-keuangan/pkg/channels"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/deltachat"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/discord"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/feishu"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/irc"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/line"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/maixcam"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/mqtt"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/onebot"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/pico"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/slack"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/slack_webhook"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/teams_webhook"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/telegram"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/vk"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/wecom"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/weixin"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/whatsapp"
-	_ "github.com/xxayii57/bot-keuangan/pkg/channels/whatsapp_native"
-	"github.com/xxayii57/bot-keuangan/pkg/config"
-	"github.com/xxayii57/bot-keuangan/pkg/cron"
-	"github.com/xxayii57/bot-keuangan/pkg/devices"
-	runtimeevents "github.com/xxayii57/bot-keuangan/pkg/events"
-	"github.com/xxayii57/bot-keuangan/pkg/health"
-	"github.com/xxayii57/bot-keuangan/pkg/heartbeat"
-	"github.com/xxayii57/bot-keuangan/pkg/logger"
-	"github.com/xxayii57/bot-keuangan/pkg/media"
-	"github.com/xxayii57/bot-keuangan/pkg/netbind"
-	"github.com/xxayii57/bot-keuangan/pkg/pid"
-	"github.com/xxayii57/bot-keuangan/pkg/providers"
-	"github.com/xxayii57/bot-keuangan/pkg/state"
-	"github.com/xxayii57/bot-keuangan/pkg/tools"
+	"github.com/xxayii57/intimclaw/pkg/agent"
+	"github.com/xxayii57/intimclaw/pkg/agent/approval"
+	"github.com/xxayii57/intimclaw/pkg/audio/asr"
+	"github.com/xxayii57/intimclaw/pkg/audio/tts"
+	"github.com/xxayii57/intimclaw/pkg/bus"
+	"github.com/xxayii57/intimclaw/pkg/channels"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/deltachat"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/discord"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/feishu"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/irc"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/line"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/maixcam"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/mqtt"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/onebot"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/pico"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/slack"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/slack_webhook"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/teams_webhook"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/telegram"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/vk"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/wecom"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/weixin"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/whatsapp"
+	_ "github.com/xxayii57/intimclaw/pkg/channels/whatsapp_native"
+	"github.com/xxayii57/intimclaw/pkg/config"
+	"github.com/xxayii57/intimclaw/pkg/cron"
+	"github.com/xxayii57/intimclaw/pkg/devices"
+	runtimeevents "github.com/xxayii57/intimclaw/pkg/events"
+	"github.com/xxayii57/intimclaw/pkg/health"
+	"github.com/xxayii57/intimclaw/pkg/heartbeat"
+	"github.com/xxayii57/intimclaw/pkg/logger"
+	"github.com/xxayii57/intimclaw/pkg/media"
+	"github.com/xxayii57/intimclaw/pkg/netbind"
+	"github.com/xxayii57/intimclaw/pkg/pid"
+	"github.com/xxayii57/intimclaw/pkg/providers"
+	"github.com/xxayii57/intimclaw/pkg/state"
+	"github.com/xxayii57/intimclaw/pkg/tools"
 )
 
 const (
@@ -495,13 +495,62 @@ func setupAndStartServices(
 							"error": err.Error(),
 						})
 					} else {
-						fmt.Println("✓ Telegram tool-approval gate mounted")
-					}
-				} else {
-					logger.WarnC("approval", "tools.approval.chat_id is not a valid numeric chat id; gate not mounted")
+					fmt.Println("✓ Telegram tool-approval gate mounted")
 				}
+			} else {
+				logger.WarnC("approval", "tools.approval.chat_id is not a valid numeric chat id; gate not mounted")
+			}
+
+			// Wire session listing for /sessions inline keyboard
+			type sessionLister interface {
+				SetAgentSessions(func() []string)
+			}
+			type sessionOps interface {
+				SetSessionCallbacks(rename func(string, string) error, delete func(string) error, refresh func() []string)
+			}
+			if sl, hasSl := ch.(sessionLister); hasSl {
+				sl.SetAgentSessions(func() []string {
+					if agentLoop == nil {
+						return nil
+					}
+					registry := agentLoop.GetRegistry()
+					if registry == nil {
+						return nil
+					}
+					if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
+						return agentInst.Sessions.ListSessions()
+					}
+					return nil
+				})
+				if ops, hasOps := ch.(sessionOps); hasOps {
+					ops.SetSessionCallbacks(
+						func(oldKey, newKey string) error {
+							if agentLoop == nil {
+								return nil
+							}
+							registry := agentLoop.GetRegistry()
+							if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
+								return agentInst.Sessions.RenameSession(oldKey, newKey)
+							}
+							return nil
+						},
+						func(key string) error {
+							if agentLoop == nil {
+								return nil
+							}
+							registry := agentLoop.GetRegistry()
+							if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
+								return agentInst.Sessions.DeleteSession(key)
+							}
+							return nil
+						},
+						nil, // refresh handled by agentSessions
+					)
+				}
+				fmt.Println("✓ Telegram session keyboard wired")
 			}
 		}
+	}
 	}
 
 	transcriber := asr.DetectTranscriber(cfg)
