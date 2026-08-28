@@ -473,89 +473,75 @@ func setupAndStartServices(
 	tgCh, _ := runningServices.ChannelManager.GetChannel(config.ChannelTelegram)
 
 	// Telegram tool-approval gate (human-in-the-loop via inline keyboard)
-	if cfg.Tools.Approval.Enabled {
-		if ch, ok := runningServices.ChannelManager.GetChannel(config.ChannelTelegram); ok {
-			type botProvider interface{ Bot() *telego.Bot }
-			type callbackRegistrar interface {
-				SetCallbackHandler(func(string) bool)
-			}
-			tgCh, hasBot := ch.(botProvider)
-			registrar, hasRegistrar := ch.(callbackRegistrar)
-			if hasBot && hasRegistrar && tgCh.Bot() != nil {
-				chatID := strings.TrimSpace(cfg.Tools.Approval.ChatID)
-				var cid int64
-				if _, err := fmt.Sscanf(chatID, "%d", &cid); err == nil {
-					gate := approval.NewGate(approval.Options{
-						Bot:      tgCh.Bot(),
-						ChatID:   cid,
-						Patterns: cfg.Tools.Approval.Patterns,
-						Timeout:  time.Duration(cfg.Tools.Approval.TimeoutSeconds) * time.Second,
-					})
-					registrar.SetCallbackHandler(gate.HandleCallback)
-					if err := agentLoop.MountHook(agent.NamedHook("telegram-approval", gate)); err != nil {
-						logger.ErrorCF("approval", "failed to mount telegram approval gate", map[string]any{
-							"error": err.Error(),
+	if cfg.Tools.Approval.Enabled && tgCh != nil {
+		type botProvider interface{ Bot() *telego.Bot }
+		type callbackRegistrar interface {
+			SetCallbackHandler(func(string) bool)
+		}
+		if bp, ok := tgCh.(botProvider); ok {
+			if cr, ok2 := tgCh.(callbackRegistrar); ok2 {
+				if bp.Bot() != nil {
+					chatID := strings.TrimSpace(cfg.Tools.Approval.ChatID)
+					var cid int64
+					if _, err := fmt.Sscanf(chatID, "%d", &cid); err == nil {
+						gate := approval.NewGate(approval.Options{
+							Bot:      bp.Bot(),
+							ChatID:   cid,
+							Patterns: cfg.Tools.Approval.Patterns,
+							Timeout:  time.Duration(cfg.Tools.Approval.TimeoutSeconds) * time.Second,
 						})
-					} else {
-						fmt.Println("✓ Telegram tool-approval gate mounted")
+						cr.SetCallbackHandler(gate.HandleCallback)
+						if err := agentLoop.MountHook(agent.NamedHook("telegram-approval", gate)); err != nil {
+							logger.ErrorCF("approval", "failed to mount telegram approval gate", map[string]any{"error": err.Error()})
+						} else {
+							fmt.Println("✓ Telegram tool-approval gate mounted")
+						}
 					}
 				}
-			} else {
-				logger.WarnC("approval", "tools.approval.chat_id is not a valid numeric chat id; gate not mounted")
 			}
 		}
+	}
 
-		// Wire session listing for /sessions inline keyboard
+	// Wire session keyboard (independent of approval gate)
+	if tgCh != nil {
 		type sessionLister interface {
 			SetAgentSessions(func() []string)
-		}
-		type sessionOps interface {
 			SetSessionCallbacks(rename func(string, string) error, delete func(string, string) error, refresh func() []string)
 		}
-		if sl, hasSl := ch.(sessionLister); hasSl {
+		if sl, ok := tgCh.(sessionLister); ok {
 			sl.SetAgentSessions(func() []string {
-				if agentLoop == nil {
-					return nil
-				}
+				if agentLoop == nil { return nil }
 				registry := agentLoop.GetRegistry()
-				if registry == nil {
-					return nil
-				}
-				if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
-					return agentInst.Sessions.ListSessions()
+				if registry == nil { return nil }
+				if a, ok := registry.GetAgent("main"); ok && a.Sessions != nil {
+					return a.Sessions.ListSessions()
 				}
 				return nil
 			})
-			if ops, hasOps := ch.(sessionOps); hasOps {
-				ops.SetSessionCallbacks(
-					func(oldKey, newKey string) error {
-						if agentLoop == nil {
-							return nil
-						}
-						registry := agentLoop.GetRegistry()
-						if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
-							return agentInst.Sessions.RenameSession(oldKey, newKey)
-						}
-						return nil
-					},
-					func(key string) error {
-						if agentLoop == nil {
-							return nil
-						}
-						registry := agentLoop.GetRegistry()
-						if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
-							return agentInst.Sessions.DeleteSession(key)
-						}
-						return nil
-					},
-					nil, // refresh handled by agentSessions
-				)
-			}
+			sl.SetSessionCallbacks(
+				func(oldKey, newKey string) error {
+					if agentLoop == nil { return nil }
+					r := agentLoop.GetRegistry()
+					if a, ok := r.GetAgent("main"); ok && a.Sessions != nil {
+						return a.Sessions.RenameSession(oldKey, newKey)
+					}
+					return nil
+				},
+				func(key string) error {
+					if agentLoop == nil { return nil }
+					r := agentLoop.GetRegistry()
+					if a, ok := r.GetAgent("main"); ok && a.Sessions != nil {
+						return a.Sessions.DeleteSession(key)
+					}
+					return nil
+				},
+				nil,
+			)
 			fmt.Println("✓ Telegram session keyboard wired")
 		}
 	}
 
-	// Wire model keyboard callbacks for /model command (independent of approval gate)
+	// Wire model keyboard (independent of approval gate)
 	if tgCh != nil {
 		type modelCallbacks interface {
 			SetModelCallbacks(
@@ -565,7 +551,7 @@ func setupAndStartServices(
 				switchModel func(name string) error,
 			)
 		}
-		if mc, hasMc := tgCh.(modelCallbacks); hasMc {
+		if mc, ok := tgCh.(modelCallbacks); ok {
 			mc.SetModelCallbacks(
 				func() []string {
 					var names []string
@@ -577,13 +563,9 @@ func setupAndStartServices(
 					return names
 				},
 				func() (string, string) {
-					if agentLoop == nil {
-						return "", ""
-					}
-					registry := agentLoop.GetRegistry()
-					if agentInst, ok := registry.GetAgent("main"); ok {
-						return agentInst.Model, ""
-					}
+					if agentLoop == nil { return "", "" }
+					r := agentLoop.GetRegistry()
+					if a, ok := r.GetAgent("main"); ok { return a.Model, "" }
 					return "", ""
 				},
 				func(modelName string) (string, string) {
@@ -595,15 +577,11 @@ func setupAndStartServices(
 					return "", ""
 				},
 				func(name string) error {
-					configPath := filepath.Join(config.GetHome(), "config.json")
-					cfg2, err := config.LoadConfig(configPath)
-					if err != nil {
-						return err
-					}
+					p := filepath.Join(config.GetHome(), "config.json")
+					cfg2, err := config.LoadConfig(p)
+					if err != nil { return err }
 					cfg2.Agents.Defaults.ModelName = name
-					if err := config.SaveConfig(configPath, cfg2); err != nil {
-						return err
-					}
+					if err := config.SaveConfig(p, cfg2); err != nil { return err }
 					cfg.Agents.Defaults.ModelName = name
 					return nil
 				},
