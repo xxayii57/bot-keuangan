@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -1268,6 +1270,68 @@ func (c *TelegramChannel) handleMessages(ctx context.Context, messages []*telego
 			c.modelKb.SendModelList(ctx, chatID, apiBase, apiKey, current)
 			return nil
 		}
+	}
+
+	// Intercept /setkey command — set model API key and optional base URL
+	trimmedContent := strings.TrimSpace(content)
+	if strings.HasPrefix(trimmedContent, "/setkey") {
+		parts := strings.Fields(trimmedContent)
+		if len(parts) < 3 {
+			_, _ = c.bot.SendMessage(ctx, tu.Message(tu.ID(chatID),
+				"⚠️ *Format salah!*\n\nGunakan:\n`/setkey <nama_model> <api_key> [api_base]`\n\nContoh:\n`/setkey deepseek sk-xxxx https://9router.intim.my.id/v1`").WithParseMode("Markdown"))
+			return nil
+		}
+
+		modelName := parts[1]
+		apiKey := parts[2]
+		apiBase := ""
+		if len(parts) >= 4 {
+			apiBase = parts[3]
+		}
+
+		p := filepath.Join(config.GetHome(), "config.json")
+		cfg2, err := config.LoadConfig(p)
+		if err != nil {
+			_, _ = c.bot.SendMessage(ctx, tu.Message(tu.ID(chatID), fmt.Sprintf("❌ *Gagal load config:* %v", err)).WithParseMode("Markdown"))
+			return nil
+		}
+
+		found := false
+		for _, m := range cfg2.ModelList {
+			if m != nil && m.ModelName == modelName {
+				m.APIKeys = config.SimpleSecureStrings(apiKey)
+				if apiBase != "" {
+					m.APIBase = apiBase
+				}
+				m.Enabled = true
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			_, _ = c.bot.SendMessage(ctx, tu.Message(tu.ID(chatID), fmt.Sprintf("❌ *Model `%s` tidak ditemukan di config!*", modelName)).WithParseMode("Markdown"))
+			return nil
+		}
+
+		if err := config.SaveConfig(p, cfg2); err != nil {
+			_, _ = c.bot.SendMessage(ctx, tu.Message(tu.ID(chatID), fmt.Sprintf("❌ *Gagal menyimpan config:* %v", err)).WithParseMode("Markdown"))
+			return nil
+		}
+
+		// Trigger restart to apply changes if running under systemd
+		go func() {
+			time.Sleep(1 * time.Second)
+			exec.Command("systemctl", "restart", "intimclaw-webui").Run()
+		}()
+
+		msgText := fmt.Sprintf("✅ *Config Model `%s` Berhasil Diupdate!*\n\nKey: `••••••••`", modelName)
+		if apiBase != "" {
+			msgText += fmt.Sprintf("\nBase URL: `%s`", apiBase)
+		}
+		msgText += "\n\n_Restarting service to apply changes..._"
+		_, _ = c.bot.SendMessage(ctx, tu.Message(tu.ID(chatID), msgText).WithParseMode("Markdown"))
+		return nil
 	}
 
 	// Intercept /sessions command — send inline keyboard
