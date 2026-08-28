@@ -1,4 +1,4 @@
-module github.com/xxayii57/bot-keuangan
+module github.com/xxayii57/intimclaw
 
 go 1.25.13
 

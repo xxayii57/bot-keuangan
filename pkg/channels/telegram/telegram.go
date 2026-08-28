@@ -61,7 +61,12 @@ type TelegramChannel struct {
 	tgCfg     *config.TelegramSettings
 	progress  *channels.ToolFeedbackAnimator
 	sessionKb *SessionKeyboard
+	modelKb   *ModelKeyboard
 	agentSessions func() []string
+	modelListFn   func() []string
+	modelSwitchFn func(name string) error
+	modelCredsFn  func(name string) (apiBase, apiKey string)
+	modelCfgProvider func() (string, string)
 
 	callbackMu      sync.Mutex
 	callbackHandler func(data string) bool
@@ -90,6 +95,39 @@ func (c *TelegramChannel) SetCallbackHandler(fn func(data string) bool) {
 // SetAgentSessions provides a function to list sessions from the agent loop.
 func (c *TelegramChannel) SetAgentSessions(fn func() []string) {
 	c.agentSessions = fn
+}
+
+// modelSource returns apiBase, apiKey, and currentModelName from injected config.
+func (c *TelegramChannel) modelSource() (string, string, string) {
+	if c.modelListFn == nil {
+		return "", "", ""
+	}
+	models := c.modelListFn()
+	if len(models) == 0 {
+		return "", "", ""
+	}
+	// We can't get apiBase from names only; gateway will set modelCfgProvider
+	if c.modelCfgProvider == nil {
+		return "", "", ""
+	}
+	name, provider := c.modelCfgProvider()
+	_ = name
+	_ = provider
+	apiBase, apiKey := c.modelCredsFn(name)
+	return apiBase, apiKey, name
+}
+
+// SetModelCallbacks wires config access + model switching for /model keyboard.
+func (c *TelegramChannel) SetModelCallbacks(
+	listModels func() []string,
+	getCurrent func() (string, string),
+	getCreds func(modelName string) (apiBase, apiKey string),
+	switchModel func(name string) error,
+) {
+	c.modelListFn = listModels
+	c.modelCfgProvider = getCurrent
+	c.modelCredsFn = getCreds
+	c.modelSwitchFn = switchModel
 }
 
 // SetSessionCallbacks wires rename/delete/refresh functions to the session keyboard.
@@ -173,6 +211,7 @@ func NewTelegramChannel(
 	}
 	ch.progress = channels.NewToolFeedbackAnimator(ch.EditMessage)
 	ch.sessionKb = NewSessionKeyboard(bot)
+	ch.modelKb = NewModelKeyboard(bot)
 	return ch, nil
 }
 
@@ -214,6 +253,11 @@ func (c *TelegramChannel) Start(ctx context.Context) error {
 
 		// Try session keyboard first
 		if c.sessionKb != nil && c.sessionKb.HandleCallback(ctx, query) {
+			return nil
+		}
+
+		// Try model keyboard
+		if c.modelKb != nil && c.modelKb.HandleCallback(ctx, query, c.modelSwitchFn) {
 			return nil
 		}
 
@@ -1215,6 +1259,16 @@ func (c *TelegramChannel) handleMessages(ctx context.Context, messages []*telego
 	// must share one session per group.
 	compositeChatID := fmt.Sprintf("%d", chatID)
 	threadID := message.MessageThreadID
+
+	// Intercept /model command — send inline keyboard
+	lowerContent := strings.ToLower(strings.TrimSpace(content))
+	if lowerContent == "/model" || lowerContent == "/model@intimclawbot" {
+		if c.modelKb != nil {
+			apiBase, apiKey, current := c.modelSource()
+			c.modelKb.SendModelList(ctx, chatID, apiBase, apiKey, current)
+			return nil
+		}
+	}
 
 	// Intercept /sessions command — send inline keyboard
 	if strings.HasPrefix(strings.TrimSpace(content), "/sessions") {

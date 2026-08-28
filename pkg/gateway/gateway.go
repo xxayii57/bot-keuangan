@@ -470,6 +470,9 @@ func setupAndStartServices(
 	agentLoop.SetChannelManager(runningServices.ChannelManager)
 	agentLoop.SetMediaStore(runningServices.MediaStore)
 
+	// Get Telegram channel reference for all Telegram integrations
+	tgCh, _ := runningServices.ChannelManager.GetChannel(config.ChannelTelegram)
+
 	// Telegram tool-approval gate (human-in-the-loop via inline keyboard)
 	if cfg.Tools.Approval.Enabled {
 		if ch, ok := runningServices.ChannelManager.GetChannel(config.ChannelTelegram); ok {
@@ -551,6 +554,62 @@ func setupAndStartServices(
 			}
 		}
 	}
+
+	// Wire model keyboard callbacks for /model command (independent of approval gate)
+	if tgCh != nil {
+		type modelCallbacks interface {
+			SetModelCallbacks(
+				listModels func() []string,
+				getCurrent func() (string, string),
+				getCreds func(modelName string) (apiBase, apiKey string),
+				switchModel func(name string) error,
+			)
+		}
+		if mc, hasMc := tgCh.(modelCallbacks); hasMc {
+			mc.SetModelCallbacks(
+				func() []string {
+					var names []string
+					for _, m := range cfg.ModelList {
+						if m != nil && m.Enabled {
+							names = append(names, m.ModelName)
+						}
+					}
+					return names
+				},
+				func() (string, string) {
+					if agentLoop == nil {
+						return "", ""
+					}
+					registry := agentLoop.GetRegistry()
+					if agentInst, ok := registry.GetAgent("main"); ok {
+						return agentInst.Model, ""
+					}
+					return "", ""
+				},
+				func(modelName string) (string, string) {
+					for _, m := range cfg.ModelList {
+						if m != nil && m.ModelName == modelName {
+							return m.APIBase, m.APIKey()
+						}
+					}
+					return "", ""
+				},
+				func(name string) error {
+					configPath := filepath.Join(config.GetHome(), "config.json")
+					cfg2, err := config.LoadConfig(configPath)
+					if err != nil {
+						return err
+					}
+					cfg2.Agents.Defaults.ModelName = name
+					if err := config.SaveConfig(configPath, cfg2); err != nil {
+						return err
+					}
+					cfg.Agents.Defaults.ModelName = name
+					return nil
+				},
+			)
+			fmt.Println("✓ Telegram model keyboard wired")
+		}
 	}
 
 	transcriber := asr.DetectTranscriber(cfg)
