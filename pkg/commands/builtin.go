@@ -15,6 +15,7 @@ func BuiltinDefinitions() []Definition {
 		btwCommand(),
 		switchCommand(),
 		modelCommand(),
+		setkeyCommand(),
 		checkCommand(),
 		clearCommand(),
 		contextCommand(),
