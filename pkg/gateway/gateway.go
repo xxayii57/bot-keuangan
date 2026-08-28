@@ -17,7 +17,6 @@ import (
 
 	"github.com/mymmrac/telego"
 
-
 	"github.com/xxayii57/intimclaw/pkg/agent"
 	"github.com/xxayii57/intimclaw/pkg/agent/approval"
 	"github.com/xxayii57/intimclaw/pkg/audio/asr"
@@ -498,60 +497,61 @@ func setupAndStartServices(
 							"error": err.Error(),
 						})
 					} else {
-					fmt.Println("✓ Telegram tool-approval gate mounted")
+						fmt.Println("✓ Telegram tool-approval gate mounted")
+					}
 				}
 			} else {
 				logger.WarnC("approval", "tools.approval.chat_id is not a valid numeric chat id; gate not mounted")
 			}
+		}
 
-			// Wire session listing for /sessions inline keyboard
-			type sessionLister interface {
-				SetAgentSessions(func() []string)
-			}
-			type sessionOps interface {
-				SetSessionCallbacks(rename func(string, string) error, delete func(string) error, refresh func() []string)
-			}
-			if sl, hasSl := ch.(sessionLister); hasSl {
-				sl.SetAgentSessions(func() []string {
-					if agentLoop == nil {
-						return nil
-					}
-					registry := agentLoop.GetRegistry()
-					if registry == nil {
-						return nil
-					}
-					if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
-						return agentInst.Sessions.ListSessions()
-					}
+		// Wire session listing for /sessions inline keyboard
+		type sessionLister interface {
+			SetAgentSessions(func() []string)
+		}
+		type sessionOps interface {
+			SetSessionCallbacks(rename func(string, string) error, delete func(string, string) error, refresh func() []string)
+		}
+		if sl, hasSl := ch.(sessionLister); hasSl {
+			sl.SetAgentSessions(func() []string {
+				if agentLoop == nil {
 					return nil
-				})
-				if ops, hasOps := ch.(sessionOps); hasOps {
-					ops.SetSessionCallbacks(
-						func(oldKey, newKey string) error {
-							if agentLoop == nil {
-								return nil
-							}
-							registry := agentLoop.GetRegistry()
-							if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
-								return agentInst.Sessions.RenameSession(oldKey, newKey)
-							}
-							return nil
-						},
-						func(key string) error {
-							if agentLoop == nil {
-								return nil
-							}
-							registry := agentLoop.GetRegistry()
-							if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
-								return agentInst.Sessions.DeleteSession(key)
-							}
-							return nil
-						},
-						nil, // refresh handled by agentSessions
-					)
 				}
-				fmt.Println("✓ Telegram session keyboard wired")
+				registry := agentLoop.GetRegistry()
+				if registry == nil {
+					return nil
+				}
+				if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
+					return agentInst.Sessions.ListSessions()
+				}
+				return nil
+			})
+			if ops, hasOps := ch.(sessionOps); hasOps {
+				ops.SetSessionCallbacks(
+					func(oldKey, newKey string) error {
+						if agentLoop == nil {
+							return nil
+						}
+						registry := agentLoop.GetRegistry()
+						if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
+							return agentInst.Sessions.RenameSession(oldKey, newKey)
+						}
+						return nil
+					},
+					func(key string) error {
+						if agentLoop == nil {
+							return nil
+						}
+						registry := agentLoop.GetRegistry()
+						if agentInst, ok := registry.GetAgent("main"); ok && agentInst.Sessions != nil {
+							return agentInst.Sessions.DeleteSession(key)
+						}
+						return nil
+					},
+					nil, // refresh handled by agentSessions
+				)
 			}
+			fmt.Println("✓ Telegram session keyboard wired")
 		}
 	}
 
