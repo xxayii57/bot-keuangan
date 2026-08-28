@@ -17,7 +17,7 @@ cmd/**/workspace
 # IntimClaw
 .intimclaw/
 /config.json
-sessions/
+/sessions/
 build/
 
 # Coverage
