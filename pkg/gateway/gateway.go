@@ -592,6 +592,11 @@ func setupAndStartServices(
 					cfg2.Agents.Defaults.ModelName = realName
 					if err := config.SaveConfig(p, cfg2); err != nil { return err }
 					cfg.Agents.Defaults.ModelName = realName
+					if reloadTrigger != nil {
+						go func() {
+							_ = reloadTrigger()
+						}()
+					}
 					return nil
 				},
 			)
