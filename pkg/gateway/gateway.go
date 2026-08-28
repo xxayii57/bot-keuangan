@@ -565,15 +565,22 @@ func setupAndStartServices(
 				func() (string, string) {
 					if agentLoop == nil { return "", "" }
 					r := agentLoop.GetRegistry()
-					if a, ok := r.GetAgent("main"); ok { return a.Model, "" }
+					if a, ok := r.GetAgent("main"); ok {
+						fmt.Printf("[DEBUG] modelCfgProvider returning model=%q\n", a.Model)
+						return a.Model, ""
+					}
+					fmt.Printf("[DEBUG] modelCfgProvider: main agent not found!\n")
 					return "", ""
 				},
 				func(modelName string) (string, string) {
+					fmt.Printf("[DEBUG] getCreds called with modelName=%q\n", modelName)
 					for _, m := range cfg.ModelList {
 						if m != nil && m.ModelName == modelName {
+							fmt.Printf("[DEBUG] found model name match! base=%q key_len=%d\n", m.APIBase, len(m.APIKey()))
 							return m.APIBase, m.APIKey()
 						}
 					}
+					fmt.Printf("[DEBUG] model name not found in model list!\n")
 					return "", ""
 				},
 				func(name string) error {
