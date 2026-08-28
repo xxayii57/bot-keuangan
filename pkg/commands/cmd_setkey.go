@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/xxayii57/intimclaw/pkg/config"
 )
@@ -27,16 +28,16 @@ func setkeyHandler() Handler {
 			return nil
 		}
 
-		args := req.Args
-		if len(args) < 2 {
+		parts := strings.Fields(req.Text)
+		if len(parts) < 3 {
 			return req.Reply("⚠️ *Format salah!*\n\nGunakan:\n`/setkey <nama_model> <api_key> [api_base]`\n\nContoh:\n`/setkey deepseek sk-xxxx https://9router.intim.my.id/v1`")
 		}
 
-		modelName := args[0]
-		apiKey := args[1]
+		modelName := parts[1]
+		apiKey := parts[2]
 		apiBase := ""
-		if len(args) >= 3 {
-			apiBase = args[2]
+		if len(parts) >= 4 {
+			apiBase = parts[3]
 		}
 
 		p := filepath.Join(config.GetHome(), "config.json")
