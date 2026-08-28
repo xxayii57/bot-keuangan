@@ -227,8 +227,7 @@ func Run(debug bool, homePath, configPath string, allowEmptyStartup bool) (runEr
 	closeListeners = false
 
 	// Setup manual reload channel for /reload endpoint
-	manualReloadChan := make(chan struct{}, 1)
-	runningServices.manualReloadChan = manualReloadChan
+	manualReloadChan := runningServices.manualReloadChan
 	reloadTrigger := func() error {
 		if !runningServices.reloading.CompareAndSwap(false, true) {
 			return fmt.Errorf("reload already in progress")
@@ -413,6 +412,7 @@ func setupAndStartServices(
 	listenResult netbind.OpenResult,
 ) (*services, error) {
 	runningServices := &services{}
+	runningServices.manualReloadChan = make(chan struct{}, 1)
 
 	execTimeout := time.Duration(cfg.Tools.Cron.ExecTimeoutMinutes) * time.Minute
 	var err error
@@ -591,10 +591,15 @@ func setupAndStartServices(
 					}
 					cfg2.Agents.Defaults.ModelName = realName
 					if err := config.SaveConfig(p, cfg2); err != nil { return err }
-					cfg.Agents.Defaults.ModelName = realName
-					if reloadTrigger != nil {
+					if runningServices.manualReloadChan != nil {
 						go func() {
-							_ = reloadTrigger()
+							if runningServices.reloading.CompareAndSwap(false, true) {
+								select {
+								case runningServices.manualReloadChan <- struct{}{}:
+								default:
+									runningServices.reloading.Store(false)
+								}
+							}
 						}()
 					}
 					return nil
