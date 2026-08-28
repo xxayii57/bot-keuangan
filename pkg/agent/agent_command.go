@@ -308,9 +308,11 @@ func (al *AgentLoop) buildCommandsRuntime(
 			modelMu.Lock()
 			defer modelMu.Unlock()
 			modelFound := false
+			var targetModelName string
 			for _, modelCfg := range cfg.ModelList {
-				if modelCfg != nil && modelCfg.ModelName == value {
+				if modelCfg != nil && (modelCfg.ModelName == value || modelCfg.Model == value) {
 					modelFound = true
+					targetModelName = modelCfg.ModelName
 					break
 				}
 			}
@@ -318,7 +320,7 @@ func (al *AgentLoop) buildCommandsRuntime(
 				return "", fmt.Errorf("model %q not found in model_list or providers", value)
 			}
 
-			nextCandidates := resolveModelCandidates(cfg, cfg.Agents.Defaults.Provider, value, agent.Fallbacks)
+			nextCandidates := resolveModelCandidates(cfg, cfg.Agents.Defaults.Provider, targetModelName, agent.Fallbacks)
 			if len(nextCandidates) == 0 {
 				return "", fmt.Errorf("model %q did not resolve to any provider candidates", value)
 			}
@@ -364,7 +366,7 @@ func (al *AgentLoop) buildCommandsRuntime(
 				previousProviders[key] = provider
 			}
 			previousProviders["previous-primary"] = oldProvider
-			agent.Model = value
+			agent.Model = targetModelName
 			agent.Provider = nextProvider
 			agent.Candidates = nextCandidates
 			agent.CandidateProviders = nextCandidateProviders
