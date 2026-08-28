@@ -506,7 +506,7 @@ func setupAndStartServices(
 	if tgCh != nil {
 		type sessionLister interface {
 			SetAgentSessions(func() []string)
-			SetSessionCallbacks(rename func(string, string) error, delete func(string, string) error, refresh func() []string)
+			SetSessionCallbacks(rename func(string, string) error, delete func(string) error, refresh func() []string)
 		}
 		if sl, ok := tgCh.(sessionLister); ok {
 			sl.SetAgentSessions(func() []string {
