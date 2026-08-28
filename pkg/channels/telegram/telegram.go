@@ -1266,8 +1266,15 @@ func (c *TelegramChannel) handleMessages(ctx context.Context, messages []*telego
 	lowerContent := strings.ToLower(strings.TrimSpace(content))
 	if lowerContent == "/model" || lowerContent == "/model@intimclawbot" {
 		if c.modelKb != nil {
-			apiBase, apiKey, current := c.modelSource()
-			c.modelKb.SendModelList(ctx, chatID, apiBase, apiKey, current)
+			models := []string{}
+			if c.modelListFn != nil {
+				models = c.modelListFn()
+			}
+			current := ""
+			if c.modelCfgProvider != nil {
+				current, _ = c.modelCfgProvider()
+			}
+			c.modelKb.SendModelList(ctx, chatID, models, current)
 			return nil
 		}
 	}

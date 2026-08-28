@@ -556,7 +556,7 @@ func setupAndStartServices(
 				func() []string {
 					var names []string
 					for _, m := range cfg.ModelList {
-						if m != nil && m.Enabled {
+						if m != nil {
 							names = append(names, m.ModelName)
 						}
 					}

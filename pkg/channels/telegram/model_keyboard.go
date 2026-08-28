@@ -63,33 +63,26 @@ func fetchModels(apiBase, apiKey string, timeout time.Duration) ([]ModelInfo, er
 	return data.Data, nil
 }
 
-// SendModelList sends the model list as inline keyboard from live API data.
-func (mk *ModelKeyboard) SendModelList(ctx context.Context, chatID int64, apiBase, apiKey, currentModel string) error {
-	models, err := fetchModels(apiBase, apiKey, 15*time.Second)
-	if err != nil {
-		_, sendErr := mk.bot.SendMessage(ctx, telegoutil.Message(telegoutil.ID(chatID),
-			fmt.Sprintf("Gagal ambil model dari API: %v", err)))
-		return sendErr
-	}
-
-	if len(models) == 0 {
-		_, err := mk.bot.SendMessage(ctx, telegoutil.Message(telegoutil.ID(chatID), "Tidak ada model tersedia di endpoint ini."))
+// SendModelList sends the model list as inline keyboard from the local model list.
+func (mk *ModelKeyboard) SendModelList(ctx context.Context, chatID int64, localModels []string, currentModel string) error {
+	if len(localModels) == 0 {
+		_, err := mk.bot.SendMessage(ctx, telegoutil.Message(telegoutil.ID(chatID), "Tidak ada model tersedia di konfigurasi."))
 		return err
 	}
 
-	text := fmt.Sprintf("*Models* (`%d` tersedia)\nCurrent: `%s`\nPilih model:", len(models), currentModel)
+	text := fmt.Sprintf("*Models* (`%d` tersedia)\nCurrent: `%s`\nPilih model:", len(localModels), currentModel)
 
 	// Build rows: max 3 buttons per row
 	var rows [][]telego.InlineKeyboardButton
 	var row []telego.InlineKeyboardButton
-	for _, m := range models {
+	for _, name := range localModels {
 		prefix := ""
-		if m.ID == currentModel {
+		if name == currentModel {
 			prefix = "✓ "
 		}
 		btn := telego.InlineKeyboardButton{
-			Text:         fmt.Sprintf("%s%s", prefix, truncateStr(m.ID, 25)),
-			CallbackData: fmt.Sprintf("model:sel:%s", m.ID),
+			Text:         fmt.Sprintf("%s%s", prefix, truncateStr(name, 25)),
+			CallbackData: fmt.Sprintf("model:sel:%s", name),
 		}
 		row = append(row, btn)
 		if len(row) == 3 {
@@ -105,7 +98,7 @@ func (mk *ModelKeyboard) SendModelList(ctx context.Context, chatID int64, apiBas
 	msg := telegoutil.Message(telegoutil.ID(chatID), text).
 		WithParseMode("Markdown").
 		WithReplyMarkup(keyboard)
-	_, err = mk.bot.SendMessage(ctx, msg)
+	_, err := mk.bot.SendMessage(ctx, msg)
 	return err
 }
 
