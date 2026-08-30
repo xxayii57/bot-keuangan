@@ -7,7 +7,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.22.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.0
 	github.com/SevereCloud/vksdk/v3 v3.3.1
-	github.com/adhocore/gronx v1.20.0
+	github.com/adhocore/gronx v1.20.3
 	github.com/anthropics/anthropic-sdk-go v1.55.1
 	github.com/atc0005/go-teams-notify/v2 v2.14.0
 	github.com/aws/aws-sdk-go-v2 v1.42.0
@@ -32,7 +32,6 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/muesli/termenv v0.16.0
 	github.com/mymmrac/telego v1.10.0
-	github.com/open-dingtalk/dingtalk-stream-sdk-go v0.9.1
 	github.com/openai/openai-go/v3 v3.22.0
 	github.com/pion/rtp v1.10.2
 	github.com/pion/webrtc/v3 v3.3.6
@@ -42,10 +41,8 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	github.com/tencent-connect/botgo v0.2.1
 	go.mau.fi/util v0.9.8
 	go.mau.fi/whatsmeow v0.0.0-20260219150138-7ae702b1eed4
-	golang.org/x/oauth2 v0.36.0
 	golang.org/x/term v0.44.0
 	golang.org/x/time v0.15.0
 	google.golang.org/protobuf v1.36.11
@@ -119,7 +116,9 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/libc v1.73.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
@@ -132,7 +131,6 @@ require (
 	github.com/bytedance/sonic/loader v0.5.1 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/github/copilot-sdk/go v0.2.0
-	github.com/go-resty/resty/v2 v2.17.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/jsonschema-go v0.4.3
 	github.com/grbit/go-json v0.11.0 // indirect
